@@ -16,6 +16,10 @@ DB_PATH = DATA_DIR / "sgct.db"
 MAX_PREGUNTAS = 3
 MARCA_SIN_SUSTENTO = "[SIN SUSTENTO]"
 
+# Campos de la ficha, en el orden en que se muestran. Siguen la práctica del equipo, que ya
+# separa causa y solución en la columna Causa/Solucion; el síntoma sale de la descripción.
+CAMPOS_FICHA = ("sintoma", "causa", "solucion")
+
 # --- Motor de lenguaje ---
 PROVEEDORES_VALIDOS = ("simulado", "gemini")
 
@@ -110,5 +114,7 @@ CATEGORIAS_CAUSA = {
     ),
 }
 
+# El modelo no puede elegir estas categorías: para decir "no sé" sólo existe MARCA_SIN_SUSTENTO.
+# El desarrollador sí puede elegirlas al responder las preguntas.
 CATEGORIAS_NO_ELEGIBLES_MODELO = frozenset({"Descripción_insuficiente"})
 
