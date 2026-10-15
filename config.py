@@ -25,5 +25,18 @@ PROVEEDOR = os.getenv("SGCT_PROVEEDOR", "").strip().lower() or "simulado"
 
 # Es el nombre que el SDK de Google (google-genai) busca por defecto.
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-# Versión fija y no un alias "-latest": el alias cambia de modelo sin aviso y las pruebas dejarían de ser comparables.
+
+# Versión fija 
 GEMINI_MODELO = "gemini-3.8-flash"
+
+TEMPERATURA = 0.1
+TIMEOUT_SEGUNDOS = 30
+
+# --- Configuración de logs ---
+LOG_DIR = BASE_DIR / "logs"
+LOG_PATH = LOG_DIR / "sgct.log"
+
+LOG_NIVEL = os.getenv("SGCT_LOG_NIVEL", "").strip().upper() or "INFO"
+LOG_FORMATO = "%(asctime)s %(levelname)s %(name)s: %(message)s"
+
+
