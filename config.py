@@ -110,4 +110,5 @@ CATEGORIAS_CAUSA = {
     ),
 }
 
+CATEGORIAS_NO_ELEGIBLES_MODELO = frozenset({"Descripción_insuficiente"})
 
