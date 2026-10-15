@@ -1,0 +1,23 @@
+# --- Datos del cliente 
+# Se bloquea todo Excel y solo se permiten los ficticios
+*.xlsx
+*.xls
+*.csv
+!data/ejemplo/*.xlsx
+
+Seguimiento*.xlsx
+
+~$*
+
+# --- Entorno de Python ---
+.venv/
+__pycache__/
+*.pyc
+
+# --- Generados al correr la app ---
+data/*.db
+logs/
+
+# --- Secretos (clave de Claude) ---
+.streamlit/secrets.toml
+.env
