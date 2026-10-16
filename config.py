@@ -16,8 +16,7 @@ DB_PATH = DATA_DIR / "sgct.db"
 MAX_PREGUNTAS = 3
 MARCA_SIN_SUSTENTO = "[SIN SUSTENTO]"
 
-# Campos de la ficha, en el orden en que se muestran. Siguen la práctica del equipo, que ya
-# separa causa y solución en la columna Causa/Solucion; el síntoma sale de la descripción.
+# Campos de la ficha, en el orden en que se muestran. Siguen la práctica del equipo, que ya separa causa y solución en la columna Causa/Solucion; el síntoma sale de la descripción.
 CAMPOS_FICHA = ("sintoma", "causa", "solucion")
 
 # --- Motor de lenguaje ---
@@ -48,7 +47,7 @@ LOG_FORMATO = "%(asctime)s %(levelname)s %(name)s: %(message)s"
 FILA_ENCABEZADO = 7
 
 # Nombres escritos como aparecen en el Excel. core/carga.py limpia igual estos valores y los encabezados del archivo (sin tildes, minúsculas, espacios simples) antes de compararlos.
-COL_HA = "#HA"  #El correcto es la columna al lado de la columna DEV
+COL_HA = "#HA"  
 COL_DEV = "DEV"  
 COL_TIPO = "Tipo"
 COL_ESTADO = "Estado"
@@ -64,11 +63,13 @@ COL_CATEGORIA = "Categoria Causa"
 COL_SUBCATEGORIA = "Sub_Categoría Causa"
 
 # --- Filtros de detección ---
-# Lista blanca: un tipo que no esté aquí (Evolutivo o uno nuevo) no se documenta.
-# Se comparan ya limpios (sin tildes, minúsculas), igual que los encabezados.
+# Lista un tipo que no esté aquí (Evolutivo o uno nuevo) no se documenta.
 TIPOS_DOCUMENTABLES = frozenset({"incidente", "evento", "control de cambio"})
 
-# Se compara el código y no el texto: "4.3. Cerrado" y "4.4. Cerrado" son los textos que se ven en el Excel, pero el código es lo que importa.
+# Tipos que se excluyen a propósito. Un tipo que no esté en ninguna de las dos listas es nuevo
+TIPOS_EXCLUIDOS = frozenset({"evolutivo"})
+
+# Se compara el código y no el texto: "4.3. Cerrado" y "4.4. Cerrado" son los textos que se ven en el Excel.
 ESTADOS_CERRADOS = frozenset({"4.3", "4.4"})
 
 # --- Catálogo de causas ---
@@ -114,7 +115,6 @@ CATEGORIAS_CAUSA = {
     ),
 }
 
-# El modelo no puede elegir estas categorías: para decir "no sé" sólo existe MARCA_SIN_SUSTENTO.
-# El desarrollador sí puede elegirlas al responder las preguntas.
+# El modelo no puede elegir estas categorías se marca como MARCA_SIN_SUSTENTO.
 CATEGORIAS_NO_ELEGIBLES_MODELO = frozenset({"Descripción_insuficiente"})
 

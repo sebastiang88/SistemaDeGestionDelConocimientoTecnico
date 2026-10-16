@@ -83,3 +83,8 @@ CREATE TABLE IF NOT EXISTS pregunta (
 def crear_tablas(conexion):
     conexion.executescript(ESQUEMA)
     logger.info("Tablas de la base verificadas")
+
+# Devuelve el conjunto de #HA que ya tienen ficha, sea borrador o final.
+def ha_con_ficha(conexion):
+    filas = conexion.execute("SELECT ha FROM ficha").fetchall()
+    return {fila["ha"] for fila in filas}
