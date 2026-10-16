@@ -31,12 +31,15 @@ def filtrar_documentables(casos):
     logger.info("%d de %d casos son documentables", len(seleccion), len(casos))
     return seleccion
 
-# Punto de entrada para las pantallas: de los casos cargados, devuelve los que hay que documentar, "Sin ficha" significa sin fila en la tabla ficha ni borrador ni final.
-def detectar(casos, conexion):
-    documentables = filtrar_documentables(casos)
+# De los casos documentables, quita los que ya tienen ficha. "Sin ficha" significa sin fila en la tabla ficha, ni borrador ni final.
+def quitar_con_ficha(documentables, conexion):
     con_ficha = db.ha_con_ficha(conexion)
 
     pendientes = documentables[~documentables["ha"].isin(con_ficha)].reset_index(drop=True)
     logger.info("%d casos sin ficha (%d ya documentados)",
                 len(pendientes), len(documentables) - len(pendientes))
     return pendientes
+
+# Punto de entrada: de los casos cargados, devuelve los que hay que documentar.
+def detectar(casos, conexion):
+    return quitar_con_ficha(filtrar_documentables(casos), conexion)
