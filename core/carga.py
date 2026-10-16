@@ -97,3 +97,37 @@ def leer_excel(archivo):
 
     logger.info("Archivo leído: %d filas", len(datos))
     return datos
+
+
+# Deja los valores listos para guardar. No usa normalizar(): este texto es el que lee el modelo y el que se muestra en pantalla, así que conserva tildes, mayúsculas y saltos de línea.
+def limpiar_casos(datos):
+    datos = datos.copy()
+
+    # Del #HA sólo sirve la primera línea, el resto se ignora.
+    datos["ha"] = datos["ha"].str.split("\n").str[0].str.strip()
+
+    # Sin #HA no hay cómo identificar ni guardar el caso.
+    sin_ha = datos["ha"].isna() | (datos["ha"] == "")
+    if sin_ha.any():
+        logger.warning("Se descartan %d filas sin %s", sin_ha.sum(), config.COL_HA)
+        datos = datos[~sin_ha]
+
+    # El #HA no debería repetirse, pero si pasa se toma la última fila. 
+    repetidos = datos["ha"].duplicated(keep="last")
+    if repetidos.any():
+        logger.warning("%s repetidos, se toma la última fila: %s",
+                       config.COL_HA, ", ".join(sorted(set(datos.loc[repetidos, "ha"]))))
+        datos = datos[~repetidos]
+
+    # En el resto sólo se quitan los espacios de las puntas, y el texto vacío queda como vacío de pandas (NaN), igual que una celda vacía.
+    for columna in COLUMNAS:
+        limpia = datos[columna].str.strip()
+        datos[columna] = limpia.where(limpia != "")
+
+    return datos.reset_index(drop=True)
+
+# Punto de entrada para las pantallas: lee el archivo y devuelve los casos limpios.
+def cargar(archivo):
+    casos = limpiar_casos(leer_excel(archivo))
+    logger.info("Casos cargados: %d", len(casos))
+    return casos
