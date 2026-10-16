@@ -4,9 +4,12 @@
 import json
 import logging
 import re
+import time
 from dataclasses import dataclass
 
 import pandas as pd
+from google import genai
+from google.genai import types
 
 import config
 
@@ -93,3 +96,44 @@ def simular(caso):
         "preguntas": preguntas,
     }
     return json.dumps(borrador, ensure_ascii=False)
+
+# --- Gemini ---
+# Envía el prompt a Gemini y devuelve el texto de la respuesta. Si algo falla lanza la excepción de usar el simulado.
+def llamar_gemini(prompt):
+    cliente = genai.Client(
+        api_key=config.GEMINI_API_KEY,
+        http_options=types.HttpOptions(timeout=config.TIMEOUT_SEGUNDOS * 1000),
+    )
+    respuesta = cliente.models.generate_content(
+        model=config.GEMINI_MODELO,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            temperature=config.TEMPERATURA,
+            response_mime_type="application/json",
+        ),
+    )
+    if not respuesta.text:
+        raise ValueError("Gemini devolvió una respuesta vacía")
+    return respuesta.text
+
+# --- Punto de entrada ---
+# Genera el borrador de un caso con el motor activo, si Gemini falla por alguna razón responde el simulado.
+def generar(prompt, caso):
+    motor = motor_activo()
+    modelo = None
+    inicio = time.perf_counter()
+
+    if motor == "gemini":
+        try:
+            texto = llamar_gemini(prompt)
+            modelo = config.GEMINI_MODELO
+        except Exception as error:
+            logger.warning("Gemini falló (%s: %s), se usa el simulado", type(error).__name__, error)
+            motor = "simulado"
+
+    if motor == "simulado":
+        texto = simular(caso)
+        
+    duracion_ms = round((time.perf_counter() - inicio) * 1000)
+    logger.info("Borrador generado con %s en %d ms", motor, duracion_ms)
+    return Respuesta(texto=texto, motor=motor, modelo=modelo, duracion_ms=duracion_ms)
