@@ -1,12 +1,12 @@
 # -- Pantalla de los módulos 1 y 2
 
-import json
 from contextlib import closing
 
 import streamlit as st
 
 import config
-from core import carga, db, deteccion, proveedor
+import ui
+from core import carga, db, deteccion
 
 st.title("Casos pendientes de documentar")
 
@@ -58,7 +58,7 @@ if pendientes.empty:
 
 # --- Tabla de pendientes ---
 # La clave incluye el nombre del archivo para que la selección se borre al cargar otro archivo
-st.markdown("**Seleccione un caso en la tabla para ver su borrador.**")
+st.markdown("**Seleccione un caso en la tabla para documentarlo.**")
 seleccion = st.dataframe(
     pendientes[["ha", "tipo", "responsable", "flujo", "descripcion"]],
     column_config={
@@ -79,43 +79,13 @@ filas = seleccion.selection.rows
 if not filas:
     st.stop()
 
-# --- Caso y borrador lado a lado ---
+# --- Caso seleccionado ---
+# Aquí sólo se ve el caso, el borrador se genera en Documentar.
 caso = pendientes.iloc[filas[0]]
-borrador = json.loads(proveedor.simular(caso))
-
-# Muestra un campo si está vacío o sin sustento lo muestra.
-def mostrar(titulo, valor):
-    st.markdown(f"**{titulo}**")
-    if valor == config.MARCA_SIN_SUSTENTO:
-        st.warning(config.MARCA_SIN_SUSTENTO, icon=":material/help:")
-    elif carga.normalizar(valor) == "":
-        st.caption("Vacío en el archivo")
-    else:
-        st.write(valor)
-
 st.subheader(f"HA {caso['ha']}")
-izquierda, derecha = st.columns(2)
+ui.mostrar_caso(caso)
 
-with izquierda:
-    with st.container(border=True):
-        st.markdown("#### Lo que dice el caso")
-        mostrar("Descripción", caso["descripcion"])
-        mostrar("Observaciones", caso["observaciones"])
-        mostrar("Causa / Solución", caso["causa_solucion"])
-
-with derecha:
-    with st.container(border=True):
-        st.markdown("#### Borrador propuesto")
-        st.caption("Vista previa con el motor simulado. Todavía no se guarda la ficha ni se usa el modelo de lenguaje.")
-        etiquetas = {"sintoma": "Síntoma", "causa": "Causa", "solucion": "Solución"}
-        for campo in config.CAMPOS_FICHA:
-            mostrar(etiquetas[campo], borrador[campo])
-        categoria = borrador["categoria"]
-        if categoria != config.MARCA_SIN_SUSTENTO:
-            categoria = f"{categoria} / {borrador['subcategoria']}"
-        mostrar("Categoría de la causa", categoria)
-
-        if borrador["preguntas"]:
-            st.markdown("**Preguntas para el responsable**")
-            for numero, pregunta in enumerate(borrador["preguntas"], start=1):
-                st.write(f"{numero}. {pregunta['texto']}")
+if st.button("Documentar este caso", type="primary", icon=":material/edit_note:"):
+    st.session_state["ha_a_documentar"] = caso["ha"]
+    st.session_state.pop("ficha_id", None)
+    st.switch_page("pages/documentar.py")

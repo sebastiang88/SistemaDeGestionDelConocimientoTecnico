@@ -39,5 +39,6 @@ preparar_base()
 menu = st.navigation([
     st.Page("pages/inicio.py", title="Inicio", icon=":material/home:", default=True),
     st.Page("pages/casos_pendientes.py", title="Casos pendientes", icon=":material/assignment:"),
+    st.Page("pages/documentar.py", title="Documentar", icon=":material/edit_note:"),
 ])
 menu.run()
