@@ -30,6 +30,11 @@ def categoria_texto(ficha):
         return config.MARCA_SIN_SUSTENTO
     return f"{ficha['categoria']} / {ficha['subcategoria']}"
 
-# Nombre de categoría para mostrar,sin los guiones bajos que trae del Excel.
+# Aviso que va arriba de cada pantalla de maqueta.
+def aviso_maqueta(detalle):
+    st.warning(f"**Maqueta.** {detalle} No forma parte de la funcionalidad entregada en el MVP.",
+               icon=":material/construction:")
+    
+# Nombre de categoría para mostrar sin los guiones bajos que trae del Excel.
 def nombre_categoria(categoria):
     return categoria.replace("_", " ")

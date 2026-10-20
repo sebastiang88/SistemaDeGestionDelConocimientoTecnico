@@ -42,6 +42,9 @@ LOG_PATH = LOG_DIR / "sgct.log"
 LOG_NIVEL = os.getenv("SGCT_LOG_NIVEL", "").strip().upper() or "INFO"
 LOG_FORMATO = "%(asctime)s %(levelname)s %(name)s: %(message)s"
 
+# Las fechas se guardan en UTC en la base en pantalla se muestran en la hora de Colombia.
+ZONA_HORARIA = "America/Bogota"
+
 # --- Archivo de seguimiento ---
 # Fila de los encabezados tal como se ve en Excel 
 FILA_ENCABEZADO = 7
@@ -117,4 +120,3 @@ CATEGORIAS_CAUSA = {
 
 # El modelo no puede elegir estas categorías se marca como MARCA_SIN_SUSTENTO.
 CATEGORIAS_NO_ELEGIBLES_MODELO = frozenset({"Descripción_insuficiente"})
-

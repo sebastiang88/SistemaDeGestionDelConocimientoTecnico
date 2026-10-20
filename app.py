@@ -36,9 +36,17 @@ st.set_page_config(page_title="SGCT", page_icon=":material/menu_book:", layout="
 configurar_logs()
 preparar_base()
 
-menu = st.navigation([
-    st.Page("pages/inicio.py", title="Inicio", icon=":material/home:", default=True),
-    st.Page("pages/casos_pendientes.py", title="Casos pendientes", icon=":material/assignment:"),
-    st.Page("pages/documentar.py", title="Documentar", icon=":material/edit_note:"),
-])
+# Las maquetas van en una sección aparte del menú.
+menu = st.navigation({
+    "": [
+        st.Page("pages/inicio.py", title="Inicio", icon=":material/home:", default=True),
+        st.Page("pages/casos_pendientes.py", title="Casos pendientes", icon=":material/assignment:"),
+        st.Page("pages/documentar.py", title="Documentar", icon=":material/edit_note:"),
+        st.Page("pages/fichas.py", title="Fichas", icon=":material/folder_open:"),
+    ],
+    "Maquetas": [
+        st.Page("pages/tablero.py", title="Tablero", icon=":material/dashboard:"),
+        st.Page("pages/configuracion.py", title="Configuración", icon=":material/settings:"),
+    ],
+})
 menu.run()
