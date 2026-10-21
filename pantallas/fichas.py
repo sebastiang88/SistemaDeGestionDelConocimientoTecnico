@@ -100,6 +100,7 @@ if not filas:
 
 # --- Ficha abierta ---
 # El documento se arma de nuevo cada vez que se abre una ficha, a partir de los datos de la base
+with closing(db.conectar()) as conexion:
     ficha = fichas.abrir(conexion, int(lista.loc[filas[0], "id"]))
 
 final = ficha["estado"] == "final"
