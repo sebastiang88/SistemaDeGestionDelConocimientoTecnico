@@ -48,6 +48,11 @@ ZONA_HORARIA = "America/Bogota"
 # --- Archivo de seguimiento ---
 # Fila de los encabezados tal como se ve en Excel 
 FILA_ENCABEZADO = 7
+# Hoja del libro donde está el seguimiento. carga.py la busca primero; si no existe (o no tiene
+# los encabezados), revisa las demás hojas. En cada hoja busca los encabezados en las primeras
+# FILAS_A_REVISAR filas, así no se rompe si alguien agrega una fila o una hoja.
+HOJA_SEGUIMIENTO = "Flujos"
+FILAS_A_REVISAR = 20
 
 # Nombres escritos como aparecen en el Excel. core/carga.py limpia igual estos valores y los encabezados del archivo (sin tildes, minúsculas, espacios simples) antes de compararlos.
 COL_HA = "#HA"  

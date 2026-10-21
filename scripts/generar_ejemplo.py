@@ -432,8 +432,13 @@ def construir_casos(rng):
 
 def escribir_excel(casos, salida):
     libro = Workbook()
-    hoja = libro.active
-    hoja.title = "Seguimiento"
+    # Como en el archivo real, el seguimiento está en la hoja "Flujos" y no es la primera: así
+    # se prueba que carga.py la busca por nombre en vez de leer la primera hoja.
+    portada = libro.active
+    portada.title = "Resumen"
+    portada["A1"] = "Resumen del seguimiento — DATOS FICTICIOS"
+    portada["A1"].font = Font(bold=True, size=14)
+    hoja = libro.create_sheet(config.HOJA_SEGUIMIENTO)
 
     
     hoja["A1"] = "Seguimiento de casos — DATOS FICTICIOS"

@@ -38,7 +38,6 @@ class ErrorCarga(ValueError):
 
 # Deja un valor listo para comparar: sin tildes, en minúsculas y con espacios simples.
 # Es la única regla de limpieza del proyecto; se aplica igual a los encabezados del Excel y a los valores de las columnas que se leen.
-
 def normalizar(valor):
 
     if pd.isna(valor):
@@ -66,7 +65,7 @@ def ubicar_columnas(encabezados):
 
     if faltantes:
         raise ErrorCarga(
-            f"Al archivo le faltan estas columnas en la fila {config.FILA_ENCABEZADO}: "
+            "A la tabla de seguimiento le faltan estas columnas: "
             + ", ".join(faltantes)
         )
 
@@ -81,17 +80,35 @@ def ubicar_columnas(encabezados):
 
 
 # Lee el archivo de seguimiento y devuelve una tabla con sólo las columnas que usa la plataforma,con los nombres internos y todos los valores como texto sin limpiar
+def ubicar_tabla(libro):
+    marcas = {normalizar(config.COL_HA), normalizar(config.COL_DEV)}
+    orden = sorted(libro, key=lambda nombre: nombre != config.HOJA_SEGUIMIENTO)
+    for nombre in orden:
+        hoja = libro[nombre]
+        for fila in range(min(config.FILAS_A_REVISAR, len(hoja))):
+            if marcas <= {normalizar(v) for v in hoja.iloc[fila]}:
+                return nombre, fila
+    raise ErrorCarga(
+        f"No se encontró la tabla de seguimiento: ninguna hoja tiene las columnas {config.COL_HA} "
+        f"y {config.COL_DEV} en sus primeras {config.FILAS_A_REVISAR} filas."
+    )
+
 
 def leer_excel(archivo):
     try:
-        hoja = pd.read_excel(archivo, header=None, dtype=str)
+        # sheet_name=None lee todas las hojas: el seguimiento no tiene por qué ser la primera.
+        libro = pd.read_excel(archivo, sheet_name=None, header=None, dtype=str)
     except Exception as error:
         logger.warning("No se pudo leer el archivo como Excel: %s", error)
         raise ErrorCarga("No se pudo leer el archivo. Verifique que sea un Excel (.xlsx) válido.") from error
 
-    fila = config.FILA_ENCABEZADO - 1  
-    if len(hoja) <= fila:
-        raise ErrorCarga(f"El archivo no tiene encabezados en la fila {config.FILA_ENCABEZADO}.")
+    nombre_hoja, fila = ubicar_tabla(libro)
+    hoja = libro[nombre_hoja]
+    # pandas cuenta desde 0; en el log va la fila como se ve en Excel.
+    logger.info("Tabla de seguimiento en la hoja '%s', fila %d", nombre_hoja, fila + 1)
+    if fila + 1 != config.FILA_ENCABEZADO or nombre_hoja != config.HOJA_SEGUIMIENTO:
+        logger.warning("La tabla no está donde se esperaba (hoja '%s', fila %d)",
+                       config.HOJA_SEGUIMIENTO, config.FILA_ENCABEZADO)
 
     posiciones = ubicar_columnas(hoja.iloc[fila].tolist())
 
