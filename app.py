@@ -6,6 +6,7 @@ from contextlib import closing
 import streamlit as st
 
 import config
+import ui
 from core import db
 
 # Logs en la consola y en un archivo. 
@@ -32,21 +33,22 @@ def preparar_base():
     with closing(db.conectar()) as conexion:
         db.crear_tablas(conexion)
 
-st.set_page_config(page_title="SGCT", page_icon=":material/menu_book:", layout="wide")
+st.set_page_config(page_title="SGCT", page_icon=str(config.BASE_DIR / "assets" / "icono.svg"), layout="wide")
+ui.aplicar_estilos()
 configurar_logs()
 preparar_base()
 
 # Las maquetas van en una sección aparte del menú.
 menu = st.navigation({
     "": [
-        st.Page("pages/inicio.py", title="Inicio", icon=":material/home:", default=True),
-        st.Page("pages/casos_pendientes.py", title="Casos pendientes", icon=":material/assignment:"),
-        st.Page("pages/documentar.py", title="Documentar", icon=":material/edit_note:"),
-        st.Page("pages/fichas.py", title="Fichas", icon=":material/folder_open:"),
+        st.Page("pantallas/inicio.py", title="Inicio", icon=":material/home:", default=True),
+        st.Page("pantallas/casos_pendientes.py", title="Casos pendientes", icon=":material/assignment:"),
+        st.Page("pantallas/documentar.py", title="Documentar", icon=":material/edit_note:"),
+        st.Page("pantallas/fichas.py", title="Fichas", icon=":material/folder_open:"),
     ],
     "Maquetas": [
-        st.Page("pages/tablero.py", title="Tablero", icon=":material/dashboard:"),
-        st.Page("pages/configuracion.py", title="Configuración", icon=":material/settings:"),
+        st.Page("pantallas/tablero.py", title="Tablero", icon=":material/dashboard:"),
+        st.Page("pantallas/configuracion.py", title="Configuración", icon=":material/settings:"),
     ],
 })
 menu.run()

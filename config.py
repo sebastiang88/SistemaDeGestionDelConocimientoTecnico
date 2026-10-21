@@ -59,11 +59,24 @@ COL_ESTADO = "Estado"
 COL_DESCRIPCION = "Descripción incidente"
 COL_OBSERVACIONES = "Observaciones"
 COL_CAUSA_SOLUCION = "Causa/Solucion"
+COL_ID_FLUJO = "id flujo"
 COL_FLUJO = "nombre_flujo"
 
 # Causa del error.
 COL_CATEGORIA = "Categoria Causa"
 COL_SUBCATEGORIA = "Sub_Categoría Causa"
+
+# Datos del caso que van directo a la ficha, sin pasar por el modelo
+COL_SPRINT = "Sprint"
+COL_USUARIO_REPORTA = "Usuario que reporta"
+COL_FECHA_RECEPCION = "Fecha de recepcion"
+COL_FECHA_CIERRE = "Fecha de cierre"
+
+# --- Evidencias ---
+# Imágenes opcionales que el desarrollador adjunta a la ficha
+TIPOS_EVIDENCIA = ("png", "jpg", "jpeg")
+MAX_EVIDENCIAS = 5
+MAX_MB_EVIDENCIA = 5
 
 # --- Filtros de detección ---
 # Lista un tipo que no esté aquí (Evolutivo o uno nuevo) no se documenta.

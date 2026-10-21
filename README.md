@@ -75,7 +75,7 @@ core/                  Lógica, sin interfaz (se puede probar desde la terminal)
   generacion.py        Módulos 3 y 4: prompt, validación del borrador y preguntas
   fichas.py            Módulos 5 y 6: guardar, responder y consultar
   db.py                SQLite: conexión, tablas y consultas
-pages/                 Pantallas
+pantallas/             Pantallas (no se llama "pages/": ese nombre activa el modo antiguo de Streamlit)
 scripts/
   generar_ejemplo.py   Genera el archivo ficticio de ejemplo (semilla fija, reproducible)
 data/ejemplo/          Archivo de seguimiento ficticio

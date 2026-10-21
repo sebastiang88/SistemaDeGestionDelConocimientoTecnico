@@ -20,9 +20,14 @@ COLUMNAS = {
     "descripcion": config.COL_DESCRIPCION,
     "observaciones": config.COL_OBSERVACIONES,
     "causa_solucion": config.COL_CAUSA_SOLUCION,
+    "id_flujo": config.COL_ID_FLUJO,
     "flujo": config.COL_FLUJO,
     "categoria_excel": config.COL_CATEGORIA,
     "subcategoria_excel": config.COL_SUBCATEGORIA,
+    "sprint": config.COL_SPRINT,
+    "usuario_reporta": config.COL_USUARIO_REPORTA,
+    "fecha_recepcion": config.COL_FECHA_RECEPCION,
+    "fecha_cierre": config.COL_FECHA_CIERRE,
 }
 
 

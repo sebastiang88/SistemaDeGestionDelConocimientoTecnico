@@ -43,7 +43,7 @@ def guardar_borrador(conexion, caso, borrador):
     return ficha_id
 
 # Registra las respuestas del responsable y completa la ficha con ellas.
-def responder(conexion, ficha_id, respuestas, finalizar):
+def responder(conexion, ficha_id, respuestas, finalizar, lecciones=None):
     preguntas = db.obtener_preguntas(conexion, ficha_id)
     campos = {}
     respondidas = []
@@ -66,6 +66,10 @@ def responder(conexion, ficha_id, respuestas, finalizar):
             campos[pregunta["campo"]] = texto
         respondidas.append((pregunta["id"], texto))
 
+    # Lección aprendida u observaciones: texto libre y opcional del desarrollador. 
+    if lecciones is not None:
+        campos["lecciones"] = lecciones.strip() or None
+
     estado = "final" if finalizar else "borrador"
     with conexion:
         for pregunta_id, texto in respondidas:
@@ -87,4 +91,30 @@ def abrir(conexion, ficha_id):
     ficha = db.obtener_ficha(conexion, ficha_id)
     if ficha is None:
         return None
-    return {**dict(ficha), "preguntas": [dict(p) for p in db.obtener_preguntas(conexion, ficha_id)]}
+    return {
+        **dict(ficha),
+        "preguntas": [dict(p) for p in db.obtener_preguntas(conexion, ficha_id)],
+        "evidencias": [dict(e) for e in db.obtener_evidencias(conexion, ficha_id)],
+    }
+
+# --- Evidencias ---
+# Agrega una imagen a la ficha. Se valida el tipo, el tamaño y la cantidad antes de guardarla.
+def agregar_evidencia(conexion, ficha_id, nombre, contenido):
+    tipo = nombre.rsplit(".", 1)[-1].lower() if "." in nombre else ""
+    if tipo not in config.TIPOS_EVIDENCIA:
+        raise ErrorFicha(f"'{nombre}' no es una imagen válida. Formatos aceptados: "
+                         + ", ".join(config.TIPOS_EVIDENCIA) + ".")
+    if len(contenido) > config.MAX_MB_EVIDENCIA * 1024 * 1024:
+        raise ErrorFicha(f"'{nombre}' pesa más de {config.MAX_MB_EVIDENCIA} MB.")
+    if len(db.obtener_evidencias(conexion, ficha_id)) >= config.MAX_EVIDENCIAS:
+        raise ErrorFicha(f"La ficha ya tiene el máximo de {config.MAX_EVIDENCIAS} evidencias.")
+
+    with conexion:
+        db.insertar_evidencia(conexion, ficha_id, nombre, tipo, contenido)
+    logger.info("Evidencia '%s' agregada a la ficha %d", nombre, ficha_id)
+
+# Quita una imagen de la ficha.
+def quitar_evidencia(conexion, evidencia_id):
+    with conexion:
+        db.borrar_evidencia(conexion, evidencia_id)
+    logger.info("Evidencia %d eliminada", evidencia_id)

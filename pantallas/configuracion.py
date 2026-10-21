@@ -5,7 +5,7 @@ import config
 import ui
 from core import proveedor
 
-st.title("Configuración")
+ui.encabezado("Configuración", "Con qué motor y qué reglas está funcionando la plataforma.")
 ui.aviso_maqueta("Muestra la configuración actual, pero no permite cambiarla.")
 
 # --- Lo que está activo (valores reales, sólo lectura) ---

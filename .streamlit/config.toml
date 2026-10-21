@@ -1,7 +1,28 @@
+# Identidad visual de SGCT. Este archivo sí va al repositorio; el que no va es secrets.toml.
+
 [theme]
 base = "light"
-primaryColor = "#1F4E79"         
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F2F5F9" 
-textColor = "#1A1A1A"                
-font = "sans serif"
+primaryColor = "#1F4E79"             
+backgroundColor = "#F5F7FA"          
+secondaryBackgroundColor = "#E9EFF6"  
+textColor = "#1B2430"                
+borderColor = "#D9E1EA"
+showWidgetBorder = true
+# Inter, de Google Fonts: legible en pantalla y con el mismo aire en títulos y texto.
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+headingFont = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+headingFontWeights = [700, 650, 600, 600, 600, 600]
+baseRadius = "0.6rem"
+buttonRadius = "0.6rem"
+metricValueFontWeight = 700
+linkUnderline = false
+dataframeHeaderBackgroundColor = "#E9EFF6"
+greenColor = "#2E7D5B"
+orangeColor = "#C27C0E"
+
+# Menú lateral oscuro: separa la navegación del contenido y le da carácter a la app.
+[theme.sidebar]
+backgroundColor = "#0F2A44"
+secondaryBackgroundColor = "#173A5C"
+textColor = "#E6EDF5"
+borderColor = "#173A5C"

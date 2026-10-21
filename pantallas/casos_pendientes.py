@@ -7,9 +7,9 @@ import streamlit as st
 
 import config
 import ui
-from core import carga, db, deteccion
+from core import carga, db, deteccion, documento
 
-st.title("Casos pendientes de documentar")
+ui.encabezado("Casos pendientes", "Cargue el archivo de seguimiento y elija qué caso cerrado documentar.")
 
 # --- Carga del archivo ---
 # Los casos se guardan en st.session_state para que no se pierdan cuando Streamlit vuelve a ejecutar la pantalla
@@ -41,6 +41,8 @@ if origen is not None:
                 casos = carga.cargar(origen)
                 documentables = deteccion.filtrar_documentables(casos)
                 with closing(db.conectar()) as conexion:
+                    with conexion:
+                        db.actualizar_casos(conexion, casos)
                     pendientes = deteccion.quitar_con_ficha(documentables, conexion)
                 st.session_state.update(
                     casos=casos, documentables=documentables, pendientes=pendientes, nombre_archivo=nombre,
@@ -58,9 +60,10 @@ pendientes = st.session_state["pendientes"]
 # --- Resultado de la detección ---
 st.caption(f"Archivo: {st.session_state['nombre_archivo']}")
 c1, c2, c3 = st.columns(3)
-c1.metric("Casos en el archivo", len(st.session_state["casos"]))
-c2.metric("Cerrados que se documentan", len(st.session_state["documentables"]))
-c3.metric("Sin ficha", len(pendientes))
+c1.metric("Casos en el archivo", len(st.session_state["casos"]), border=True)
+c2.metric("Cerrados que se documentan", len(st.session_state["documentables"]), border=True,
+          help="Incidentes, eventos y controles de cambio en estado 4.3 o 4.4")
+c3.metric("Sin ficha", len(pendientes), border=True)
 
 if pendientes.empty:
     st.success("Todos los casos cerrados ya tienen ficha.")
@@ -70,7 +73,8 @@ if pendientes.empty:
 # La clave incluye el nombre del archivo para que la selección se borre al cargar otro archivo
 st.markdown("**Seleccione un caso en la tabla para documentarlo.**")
 seleccion = st.dataframe(
-    pendientes[["ha", "tipo", "responsable", "flujo", "descripcion"]],
+    pendientes[["ha", "tipo", "responsable", "flujo", "descripcion"]].assign(
+        flujo=[documento.nombre_flujo(i, n) for i, n in zip(pendientes["id_flujo"], pendientes["flujo"])]),
     column_config={
         "ha": "#HA",
         "tipo": "Tipo",
@@ -98,4 +102,4 @@ ui.mostrar_caso(caso)
 if st.button("Documentar este caso", type="primary", icon=":material/edit_note:"):
     st.session_state["ha_a_documentar"] = caso["ha"]
     st.session_state.pop("ficha_id", None)
-    st.switch_page("pages/documentar.py")
+    st.switch_page("pantallas/documentar.py")

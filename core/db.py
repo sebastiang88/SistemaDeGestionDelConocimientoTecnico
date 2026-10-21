@@ -42,12 +42,17 @@ CREATE TABLE IF NOT EXISTS caso (
     tipo                TEXT,
     estado              TEXT,
     responsable         TEXT,
+    id_flujo            TEXT,
     flujo               TEXT,
     descripcion         TEXT,
     observaciones       TEXT,
     causa_solucion      TEXT,
     categoria_excel     TEXT,
     subcategoria_excel  TEXT,
+    sprint              TEXT,
+    usuario_reporta     TEXT,
+    fecha_recepcion     TEXT,
+    fecha_cierre        TEXT,
     cargado_en          TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -65,6 +70,7 @@ CREATE TABLE IF NOT EXISTS ficha (
     modelo              TEXT,
     marcas_sin_sustento INTEGER NOT NULL DEFAULT 0,
     duracion_ms         INTEGER,
+    lecciones           TEXT,
     creada_en           TEXT NOT NULL DEFAULT (datetime('now')),
     actualizada_en      TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -78,10 +84,35 @@ CREATE TABLE IF NOT EXISTS pregunta (
     respuesta           TEXT,
     respondida_en       TEXT
 );
+
+CREATE TABLE IF NOT EXISTS evidencia (
+    id                  INTEGER PRIMARY KEY,
+    ficha_id            INTEGER NOT NULL REFERENCES ficha(id) ON DELETE CASCADE,
+    nombre              TEXT NOT NULL,
+    tipo                TEXT NOT NULL,
+    contenido           BLOB NOT NULL,
+    cargada_en          TEXT NOT NULL DEFAULT (datetime('now'))
+);
 """
+
+# Columnas agregadas después de crear la base. CREATE TABLE IF NOT EXISTS no modifica una tabla que ya existe, así que una base creada antes no las tendría
+COLUMNAS_AGREGADAS = (
+    ("caso", "id_flujo", "TEXT"),
+    ("caso", "sprint", "TEXT"),
+    ("caso", "usuario_reporta", "TEXT"),
+    ("caso", "fecha_recepcion", "TEXT"),
+    ("caso", "fecha_cierre", "TEXT"),
+    ("ficha", "lecciones", "TEXT"),
+)
 
 def crear_tablas(conexion):
     conexion.executescript(ESQUEMA)
+    for tabla, columna, tipo in COLUMNAS_AGREGADAS:
+        existentes = {fila["name"] for fila in conexion.execute(f"PRAGMA table_info({tabla})")}
+        if columna not in existentes:
+            conexion.execute(f"ALTER TABLE {tabla} ADD COLUMN {columna} {tipo}")
+            logger.info("Columna %s.%s agregada a la base", tabla, columna)
+    conexion.commit()
     logger.info("Tablas de la base verificadas")
 
 # Devuelve el conjunto de #HA que ya tienen ficha, sea borrador o final.
@@ -91,8 +122,9 @@ def ha_con_ficha(conexion):
 
 # --- Escritura ---
 # Estas funciones no hacen commit: quien las llama (fichas.py) agrupa varias en una sola transacción, para que nunca quede una ficha guardada sin sus preguntas.
-COLUMNAS_CASO = ("ha", "tipo", "estado", "responsable", "flujo", "descripcion",
-                 "observaciones", "causa_solucion", "categoria_excel", "subcategoria_excel")
+COLUMNAS_CASO = ("ha", "tipo", "estado", "responsable", "id_flujo", "flujo", "descripcion",
+                 "observaciones", "causa_solucion", "categoria_excel", "subcategoria_excel",
+                 "sprint", "usuario_reporta", "fecha_recepcion", "fecha_cierre")
 
 # Guarda el caso tal como venía en el Excel, si ya existe, lo actualiza.
 def guardar_caso(conexion, caso):
@@ -103,6 +135,14 @@ def guardar_caso(conexion, caso):
         f"INSERT INTO caso ({columnas}) VALUES ({valores}) "
         f"ON CONFLICT(ha) DO UPDATE SET {actualizar}, cargado_en = datetime('now')",
         {c: caso.get(c) for c in COLUMNAS_CASO},
+    )
+
+# Actualiza, con los datos del Excel recién cargado, los casos que ya están en la base (los quetienen ficha). 
+def actualizar_casos(conexion, casos):
+    asignaciones = ", ".join(f"{c} = :{c}" for c in COLUMNAS_CASO if c != "ha")
+    conexion.executemany(
+        f"UPDATE caso SET {asignaciones}, cargado_en = datetime('now') WHERE ha = :ha",
+        [{c: fila.get(c) for c in COLUMNAS_CASO} for _, fila in casos.iterrows()],
     )
 
 # Crea la ficha y devuelve su id.
@@ -132,7 +172,7 @@ def responder_pregunta(conexion, pregunta_id, respuesta):
 
 # Actualiza los campos de la ficha que vengan en "campos" y su estado.
 def actualizar_ficha(conexion, ficha_id, campos, estado):
-    permitidos = ("sintoma", "causa", "solucion", "categoria", "subcategoria")
+    permitidos = ("sintoma", "causa", "solucion", "categoria", "subcategoria", "lecciones")
     asignaciones = "".join(f"{c} = :{c}, " for c in campos if c in permitidos)
     conexion.execute(
         f"UPDATE ficha SET {asignaciones}estado = :estado, actualizada_en = datetime('now') WHERE id = :id",
@@ -143,7 +183,8 @@ def actualizar_ficha(conexion, ficha_id, campos, estado):
 # Una ficha con los datos de su caso, o None si no existe.
 def obtener_ficha(conexion, ficha_id):
     return conexion.execute(
-        "SELECT f.*, c.tipo, c.responsable, c.flujo, c.descripcion, c.observaciones, c.causa_solucion "
+        "SELECT f.*, c.tipo, c.responsable, c.id_flujo, c.flujo, c.descripcion, c.observaciones, c.causa_solucion, "
+        "       c.sprint, c.usuario_reporta, c.fecha_recepcion, c.fecha_cierre "
         "FROM ficha f JOIN caso c ON c.ha = f.ha WHERE f.id = ?",
         (ficha_id,),
     ).fetchone()
@@ -157,10 +198,29 @@ def obtener_preguntas(conexion, ficha_id):
 # Todas las fichas con lo necesario para la lista de consulta, la más reciente primero.
 def listar_fichas(conexion):
     return conexion.execute(
-        "SELECT f.id, f.ha, c.tipo, c.responsable, f.estado, f.motor, f.marcas_sin_sustento, "
-        "       f.creada_en, f.actualizada_en, "
+        "SELECT f.id, f.ha, c.tipo, c.responsable, c.id_flujo, c.flujo, c.sprint, c.descripcion, "
+        "       f.sintoma, f.causa, f.solucion, f.categoria, f.subcategoria, f.lecciones, "
+        "       f.estado, f.motor, f.marcas_sin_sustento, f.creada_en, f.actualizada_en, "
         "       COUNT(p.id) AS preguntas, "
         "       SUM(CASE WHEN p.id IS NOT NULL AND p.respuesta IS NULL THEN 1 ELSE 0 END) AS sin_responder "
         "FROM ficha f JOIN caso c ON c.ha = f.ha LEFT JOIN pregunta p ON p.ficha_id = f.id "
         "GROUP BY f.id ORDER BY f.actualizada_en DESC, f.id DESC"
     ).fetchall()
+
+# --- Evidencias ---
+# Guarda una imagen adjunta a la ficha.
+def insertar_evidencia(conexion, ficha_id, nombre, tipo, contenido):
+    conexion.execute(
+        "INSERT INTO evidencia (ficha_id, nombre, tipo, contenido) VALUES (?, ?, ?, ?)",
+        (ficha_id, nombre, tipo, contenido),
+    )
+
+# Las imágenes de una ficha, en el orden en que se cargaron.
+def obtener_evidencias(conexion, ficha_id):
+    return conexion.execute(
+        "SELECT id, nombre, tipo, contenido FROM evidencia WHERE ficha_id = ? ORDER BY id", (ficha_id,)
+    ).fetchall()
+
+# Quita una imagen de una ficha.
+def borrar_evidencia(conexion, evidencia_id):
+    conexion.execute("DELETE FROM evidencia WHERE id = ?", (evidencia_id,))

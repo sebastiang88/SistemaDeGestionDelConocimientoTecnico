@@ -5,7 +5,7 @@ from contextlib import closing
 import streamlit as st
 import config
 import ui
-from core import db, deteccion, fichas, generacion
+from core import db, deteccion, documento, fichas, generacion
 
 
 # Deja la pantalla lista para elegir otro caso.
@@ -13,7 +13,7 @@ def soltar_caso():
     st.session_state.pop("ficha_id", None)
     st.session_state.pop("ha_a_documentar", None)
     
-st.title("Documentar un caso")
+ui.encabezado("Documentar", "Genere el borrador, responda lo que falta y guarde la ficha.")
 
 ficha_id = st.session_state.get("ficha_id")
 ha = st.session_state.get("ha_a_documentar")
@@ -23,7 +23,7 @@ if ficha_id is None and ha is None:
     if aviso := st.session_state.pop("aviso", None):
         st.success(aviso)
     st.info("Elija un caso en **Casos pendientes** para documentarlo.")
-    st.page_link("pages/casos_pendientes.py", label="Ir a Casos pendientes", icon=":material/assignment:")
+    st.page_link("pantallas/casos_pendientes.py", label="Ir a Casos pendientes", icon=":material/assignment:")
 
     with closing(db.conectar()) as conexion:
         lista = fichas.listar(conexion)
@@ -73,7 +73,7 @@ if ficha_id is None:
 
     if st.button("Elegir otro caso"):
         soltar_caso()
-        st.switch_page("pages/casos_pendientes.py")
+        st.switch_page("pantallas/casos_pendientes.py")
     st.stop()
 
 # --- 3. Ficha en curso ---
@@ -86,6 +86,7 @@ if ficha is None:
 
 final = ficha["estado"] == "final"
 st.subheader(f"HA {ficha['ha']}")
+ui.etiqueta_estado(ficha["estado"])
 modelo = f" ({ficha['modelo']})" if ficha["modelo"] else ""
 st.caption(f"Borrador generado con el motor {ficha['motor']}{modelo} en {ficha['duracion_ms'] / 1000:.1f} s.")
 if final:
@@ -95,8 +96,8 @@ izquierda, derecha = st.columns(2)
 with izquierda:
     ui.mostrar_caso(ficha)
 with derecha:
-    with st.container(border=True):
-        st.markdown("#### Ficha" if final else "#### Borrador propuesto")
+    with st.container(key="tarjeta_borrador"):
+        st.markdown("#### :material/article: Ficha" if final else "#### :material/auto_awesome: Borrador propuesto")
         for campo in config.CAMPOS_FICHA:
             ui.mostrar(ui.ETIQUETAS[campo], ficha[campo])
         ui.mostrar(ui.ETIQUETAS["categoria"], ui.categoria_texto(ficha))
@@ -128,10 +129,49 @@ for pregunta in ficha["preguntas"]:
                                                   key=f"resp_{pregunta['id']}")
 # --- Guardar ---
 if final:
-    if st.button("Documentar otro caso", type="primary"):
+    boton_word, boton_otro, _ = st.columns([1, 1, 2])
+    boton_word.download_button(
+        "Descargar en Word",
+        data=documento.generar_word(ficha),
+        file_name=documento.nombre_archivo(ficha),
+        mime=documento.TIPO_WORD,
+        type="primary",
+        icon=":material/download:",
+        width="stretch",
+    )
+    if boton_otro.button("Documentar otro caso", width="stretch"):
         soltar_caso()
-        st.switch_page("pages/casos_pendientes.py")
+        st.switch_page("pantallas/casos_pendientes.py")
     st.stop()
+
+# --- Complementos opcionales ---
+# No son preguntas del borrador: no cuentan en el límite de tres ni los llena el modelo.
+st.subheader("Complementos (opcionales)")
+lecciones = st.text_area(
+    "Lección aprendida u observaciones",
+    value=ficha.get("lecciones") or "",
+    placeholder="Qué conviene saber para la próxima vez, cómo evitar que se repita, etc.",
+    key=f"lecciones_{ficha_id}",
+)
+
+st.markdown("**Evidencias**")
+for evidencia in ficha["evidencias"]:
+    columna_imagen, columna_quitar = st.columns([4, 1])
+    columna_imagen.image(evidencia["contenido"], caption=evidencia["nombre"], width=320)
+    if columna_quitar.button("Quitar", key=f"quitar_{evidencia['id']}", icon=":material/delete:"):
+        with closing(db.conectar()) as conexion:
+            fichas.quitar_evidencia(conexion, evidencia["id"])
+        st.rerun()
+
+st.caption(f"Capturas de pantalla o imágenes que respalden la solución. Hasta {config.MAX_EVIDENCIAS} "
+           f"imágenes de {config.MAX_MB_EVIDENCIA} MB. No suba capturas con datos reales.")
+version = st.session_state.get("version_evidencias", 0)
+nuevas = st.file_uploader(
+    "Agregar imágenes",
+    type=list(config.TIPOS_EVIDENCIA),
+    accept_multiple_files=True,
+    key=f"evidencias_{ficha_id}_{version}",
+)
 
 sin_responder = sum(1 for p in ficha["preguntas"] if p["respuesta"] is None)
 if sin_responder:
@@ -145,7 +185,10 @@ guardar_final = columna_final.button("Guardar ficha final", type="primary", widt
 if seguir_despues or guardar_final:
     try:
         with closing(db.conectar()) as conexion:
-            fichas.responder(conexion, ficha_id, respuestas, finalizar=guardar_final)
+            for imagen in nuevas or []:
+                fichas.agregar_evidencia(conexion, ficha_id, imagen.name, imagen.getvalue())
+            fichas.responder(conexion, ficha_id, respuestas, finalizar=guardar_final, lecciones=lecciones)
+        st.session_state["version_evidencias"] = version + 1
     except fichas.ErrorFicha as error:
         st.error(str(error))
         st.stop()
