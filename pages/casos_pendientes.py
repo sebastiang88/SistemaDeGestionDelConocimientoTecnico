@@ -1,5 +1,6 @@
 # -- Pantalla de los módulos 1 y 2
 
+import threading
 from contextlib import closing
 
 import streamlit as st
@@ -22,22 +23,31 @@ with columna_ejemplo:
 origen = None
 if usar_ejemplo:
     origen, nombre = config.DATA_DIR / "ejemplo" / "casos_ficticios.xlsx", "archivo de ejemplo"
-elif archivo is not None and st.session_state.get("nombre_archivo") != archivo.name:
+# El cargador conserva el archivo subido en cada ejecución; se carga sólo si es una subida nueva.
+elif archivo is not None and archivo.file_id != st.session_state.get("ultima_subida"):
     origen, nombre = archivo, archivo.name
+    st.session_state["ultima_subida"] = archivo.file_id
+    
+@st.cache_resource
+def candado_carga():
+    return threading.Lock()
 
-# La detección se hace sólo al cargar el archivo y se guarda en la sesión. 
+# La detección se hace sólo al cargar el archivo y se guarda en la sesión.
 if origen is not None:
-    try:
-        casos = carga.cargar(origen)
-        documentables = deteccion.filtrar_documentables(casos)
-        with closing(db.conectar()) as conexion:
-            pendientes = deteccion.quitar_con_ficha(documentables, conexion)
-        st.session_state.update(
-            casos=casos, documentables=documentables, pendientes=pendientes, nombre_archivo=nombre,
-        )
-    except carga.ErrorCarga as error:
-        st.session_state.pop("casos", None)
-        st.error(str(error))
+    with candado_carga():
+        ya_cargado = usar_ejemplo and st.session_state.get("nombre_archivo") == nombre and "casos" in st.session_state
+        if not ya_cargado:
+            try:
+                casos = carga.cargar(origen)
+                documentables = deteccion.filtrar_documentables(casos)
+                with closing(db.conectar()) as conexion:
+                    pendientes = deteccion.quitar_con_ficha(documentables, conexion)
+                st.session_state.update(
+                    casos=casos, documentables=documentables, pendientes=pendientes, nombre_archivo=nombre,
+                )
+            except carga.ErrorCarga as error:
+                st.session_state.pop("casos", None)
+                st.error(str(error))
 
 if "casos" not in st.session_state:
     st.info("Cargue el archivo de seguimiento o use el archivo de ejemplo para empezar.")
