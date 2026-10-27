@@ -29,8 +29,8 @@ PROVEEDOR = os.getenv("SGCT_PROVEEDOR", "").strip().lower() or "simulado"
 # Es el nombre que el SDK de Google (google-genai) busca por defecto.
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# Versión fija 
-GEMINI_MODELO = "gemini-3.8-flash"
+# Versión fija, no un alias "-latest", para que las pruebas sean comparables.
+GEMINI_MODELO = "gemini-3.5-flash-lite"
 
 TEMPERATURA = 0.1
 TIMEOUT_SEGUNDOS = 30

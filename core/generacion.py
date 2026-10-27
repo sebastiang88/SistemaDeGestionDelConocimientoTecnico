@@ -116,6 +116,15 @@ def _campo(valor, nombre):
         return config.MARCA_SIN_SUSTENTO
     return valor
 
+# Busca en las opciones del catálogo la que corresponde a lo que escribió el modelo
+def _del_catalogo(valor, opciones):
+    limpio = normalizar(valor.replace("_", " "))
+    for opcion in opciones:
+        if normalizar(opcion.replace("_", " ")) == limpio:
+            return opcion
+    return valor
+
+
 # Revisa la respuesta del motor y devuelve el Borrador.
 def validar(texto):
     sin = config.MARCA_SIN_SUSTENTO
@@ -135,6 +144,9 @@ def validar(texto):
     # El par debe existir y la categoría debe ser elegible.
     # Si no se cumple, se descarta la clasificación en vez de corregirla.
     categoria, subcategoria = campos["categoria"], campos["subcategoria"]
+    if sin not in (categoria, subcategoria):
+        categoria = _del_catalogo(categoria, config.CATEGORIAS_CAUSA)
+        subcategoria = _del_catalogo(subcategoria, config.CATEGORIAS_CAUSA.get(categoria, ()))
     if sin in (categoria, subcategoria):
         categoria = subcategoria = sin
     elif categoria in config.CATEGORIAS_NO_ELEGIBLES_MODELO:
