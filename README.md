@@ -7,7 +7,10 @@ no se puede deducir: máximo tres preguntas.
 Producto mínimo viable de la materia de practicas por la modalidad de emprendimiento, Facultad de Ingeniería, Corporación
 Universitaria Iberoamericana.
 
-**Aplicación en línea:** _(pendiente de despliegue en Streamlit Community Cloud)_
+**Aplicación en línea:** https://sgct-conocimiento.streamlit.app (Streamlit Community Cloud)
+
+> Si la aplicación lleva un tiempo sin uso, Streamlit la suspende: al entrar aparece un botón
+> para reactivarla, que tarda menos de un minuto.
 
 > Todos los datos de este repositorio y de la aplicación en línea son **ficticios**. Ningún dato
 > real del cliente entra al repositorio, a la plataforma ni a un servicio de IA externo.
