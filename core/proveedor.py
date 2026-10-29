@@ -50,8 +50,8 @@ PATRON_SOLUCION = re.compile(r"soluci[oó]n\s*[:\-]\s*(.+)", re.I | re.S)
 PREGUNTAS_SIMULADO = {
     "causa": "¿Qué originó la falla? Describe la causa técnica.",
     "solucion": "¿Qué se hizo para corregir la falla?",
-    "categoria": "¿En qué categoría y subcategoría del catálogo clasificarías la causa?",
     "sintoma": "¿Qué observó el usuario cuando ocurrió la falla?",
+    "categoria": "¿En qué categoría y subcategoría del catálogo clasificarías la causa?",
 }
 
 # Texto de una celda sin espacios en las puntas
@@ -74,11 +74,8 @@ def simular(caso):
     causa = _extraer(PATRON_CAUSA, causa_solucion)
     solucion = _extraer(PATRON_SOLUCION, causa_solucion)
 
-    # La categoría sólo se toma del Excel y si el par existe en el catálogo: el simulado nunca la coloca.
-    categoria = _texto(caso.get("categoria_excel"))
-    subcategoria = _texto(caso.get("subcategoria_excel"))
-    if subcategoria not in config.CATEGORIAS_CAUSA.get(categoria, ()):
-        categoria = subcategoria = sin
+    # El simulado nunca clasifica. Si el archivo trae la categoría, generacion.py la pone, igual que con Gemini.
+    categoria = subcategoria = sin
 
     campos = {"sintoma": sintoma, "causa": causa, "solucion": solucion, "categoria": categoria}
     preguntas = [

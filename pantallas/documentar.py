@@ -173,10 +173,15 @@ nuevas = st.file_uploader(
     key=f"evidencias_{ficha_id}_{version}",
 )
 
-sin_responder = sum(1 for p in ficha["preguntas"] if p["respuesta"] is None)
-if sin_responder:
-    st.caption(f"Puede guardar la ficha final aunque queden preguntas sin responder: "
-               f"esos campos quedarán como {config.MARCA_SIN_SUSTENTO}.")
+def contestada(respuesta):
+    return bool(respuesta.strip()) if isinstance(respuesta, str) else bool(respuesta)
+
+contestadas = {p["campo"] for p in ficha["preguntas"] if contestada(respuestas.get(p["id"]))}
+quedan = [ui.ETIQUETAS[c] for c in (*config.CAMPOS_FICHA, "categoria")
+          if ficha[c] == config.MARCA_SIN_SUSTENTO and c not in contestadas]
+if quedan:
+    st.warning(f"Si guarda ahora, quedarán como {config.MARCA_SIN_SUSTENTO}: {', '.join(quedan)}. "
+               "Puede guardarla así o completar las respuestas.", icon=":material/info:")
 
 columna_despues, columna_final, _ = st.columns([1, 1, 2])
 seguir_despues = columna_despues.button("Guardar y seguir después", width="stretch")

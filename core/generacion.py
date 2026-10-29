@@ -33,7 +33,7 @@ CATÁLOGO DE CAUSAS (categoría: subcategorías)
 {catalogo}
 
 PREGUNTAS AL RESPONSABLE
-Por cada campo marcado {marca}, formula la pregunta que haría falta para completarlo, dirigida al desarrollador que resolvió el caso y referida a este caso en concreto. Máximo {max_preguntas} preguntas. Si hay más vacíos, prioriza en este orden: causa, solucion, categoria, sintoma. Una sola pregunta cubre categoria y subcategoria.
+Por cada campo marcado {marca}, formula la pregunta que haría falta para completarlo, dirigida al desarrollador que resolvió el caso y referida a este caso en concreto. Máximo {max_preguntas} preguntas. Si hay más vacíos, prioriza en este orden: causa, solucion, sintoma, categoria. Una sola pregunta cubre categoria y subcategoria.
 
 ESTILO
 Español, en tercera persona, frases breves y técnicas. No copies las observaciones administrativas.
@@ -124,9 +124,19 @@ def _del_catalogo(valor, opciones):
             return opcion
     return valor
 
+# Categoría y subcategoría que el equipo ya eligió en el archivo de seguimiento, si forman un par del
+# catálogo; si no, None. Mandan sobre lo que proponga el modelo porque las eligió quien resolvió el caso.
+# Puede ser Descripción_insuficiente: la regla que la prohíbe es para el modelo, no para el desarrollador.
+def categoria_del_archivo(caso):
+    categoria = _del_catalogo(_valor(caso.get("categoria_excel")), config.CATEGORIAS_CAUSA)
+    subcategorias = config.CATEGORIAS_CAUSA.get(categoria, ())
+    subcategoria = _del_catalogo(_valor(caso.get("subcategoria_excel")), subcategorias)
+    return (categoria, subcategoria) if subcategoria in subcategorias else None
+
 
 # Revisa la respuesta del motor y devuelve el Borrador.
-def validar(texto):
+# "categoria_fija" es la del archivo de seguimiento: si viene, reemplaza la del modelo y no se pregunta.
+def validar(texto, categoria_fija=None):
     sin = config.MARCA_SIN_SUSTENTO
 
     try:
@@ -155,6 +165,8 @@ def validar(texto):
     elif subcategoria not in config.CATEGORIAS_CAUSA.get(categoria, ()):
         logger.warning("Par de categoría no válido ('%s' / '%s'); se marca sin sustento", categoria, subcategoria)
         categoria = subcategoria = sin
+    if categoria_fija:
+        categoria, subcategoria = categoria_fija
     campos["categoria"], campos["subcategoria"] = categoria, subcategoria
 
     # Qué campos quedaron vacíos, en orden de prioridad.
@@ -185,12 +197,15 @@ def validar(texto):
 def generar_borrador(caso):
     respuesta = proveedor.generar(armar_prompt(caso), caso)
     motor, modelo = respuesta.motor, respuesta.modelo
+    categoria_fija = categoria_del_archivo(caso)
+    if categoria_fija:
+        logger.info("HA %s: la categoría viene del archivo de seguimiento", caso.get("ha"))
 
     try:
-        borrador = validar(respuesta.texto)
+        borrador = validar(respuesta.texto, categoria_fija)
     except RespuestaInvalida as error:
         logger.warning("La respuesta de %s no se pudo usar (%s); se usa el simulado", motor, error)
-        borrador = validar(proveedor.simular(caso))
+        borrador = validar(proveedor.simular(caso), categoria_fija)
         motor, modelo = "simulado", None
 
     logger.info("Borrador de HA %s con %s: %d vacíos, %d preguntas",
