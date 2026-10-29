@@ -27,16 +27,22 @@ def configurar_logs():
         logging.getLogger(__name__).warning("Nivel de log '%s' no válido, se usa INFO", config.LOG_NIVEL)
     logging.getLogger(__name__).info("Aplicación iniciada")
 
-# Crea las tablas si no existen. En Cloud la base se borra con cada reinicio.
+# Crea las tablas si no existen. La base es PostgreSQL y vive fuera de la app
 @st.cache_resource
 def preparar_base():
     with closing(db.conectar()) as conexion:
         db.crear_tablas(conexion)
+    logging.getLogger(__name__).info("Base de conocimiento: PostgreSQL")
 
 st.set_page_config(page_title="SGCT", page_icon=str(config.BASE_DIR / "assets" / "icono.svg"), layout="wide")
 ui.aplicar_estilos()
 configurar_logs()
-preparar_base()
+
+try:
+    preparar_base()
+except db.ErrorBase as error:
+    st.error(str(error), icon=":material/database:")
+    st.stop()
 
 # Las maquetas van en una sección aparte del menú.
 menu = st.navigation({
@@ -45,9 +51,9 @@ menu = st.navigation({
         st.Page("pantallas/casos_pendientes.py", title="Casos pendientes", icon=":material/assignment:"),
         st.Page("pantallas/documentar.py", title="Documentar", icon=":material/edit_note:"),
         st.Page("pantallas/fichas.py", title="Fichas", icon=":material/folder_open:"),
+        st.Page("pantallas/tablero.py", title="Tablero", icon=":material/dashboard:"),
     ],
     "Maquetas": [
-        st.Page("pantallas/tablero.py", title="Tablero", icon=":material/dashboard:"),
         st.Page("pantallas/configuracion.py", title="Configuración", icon=":material/settings:"),
     ],
 })

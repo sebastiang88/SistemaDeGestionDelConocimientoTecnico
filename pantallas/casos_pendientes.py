@@ -41,7 +41,7 @@ if origen is not None:
                 casos = carga.cargar(origen)
                 documentables = deteccion.filtrar_documentables(casos)
                 with closing(db.conectar()) as conexion:
-                    with conexion:
+                    with conexion.transaction():
                         db.actualizar_casos(conexion, casos)
                     pendientes = deteccion.quitar_con_ficha(documentables, conexion)
                 st.session_state.update(
@@ -59,11 +59,23 @@ pendientes = st.session_state["pendientes"]
 
 # --- Resultado de la detección ---
 st.caption(f"Archivo: {st.session_state['nombre_archivo']}")
-c1, c2, c3 = st.columns(3)
-c1.metric("Casos en el archivo", len(st.session_state["casos"]), border=True)
-c2.metric("Cerrados que se documentan", len(st.session_state["documentables"]), border=True,
-          help="Incidentes, eventos y controles de cambio en estado 4.3 o 4.4")
-c3.metric("Sin ficha", len(pendientes), border=True)
+# Los números tienen que sumar a la vista
+casos, documentables = st.session_state["casos"], st.session_state["documentables"]
+total, n_documentables, n_sin_ficha = len(casos), len(documentables), len(pendientes)
+no_aplican = casos[~casos["ha"].isin(documentables["ha"])]
+n_evolutivos = int((no_aplican["tipo"].map(carga.normalizar) == "evolutivo").sum())
+
+c1, c2, c3, c4, c5 = st.columns(5)
+c1.metric("Casos en el archivo", total, border=True)
+c2.metric("Se documentan", n_documentables, border=True,
+          help="Incidentes, eventos y controles de cambio cerrados (estado 4.3 o 4.4)")
+c3.metric("No aplican", len(no_aplican), border=True,
+          help=f"{n_evolutivos} evolutivos y {len(no_aplican) - n_evolutivos} casos todavía abiertos")
+c4.metric("Ya tienen ficha", n_documentables - n_sin_ficha, border=True)
+c5.metric("Sin ficha", n_sin_ficha, border=True)
+st.caption(f"{total} casos = {n_documentables} que se documentan + {len(no_aplican)} que no aplican "
+           f"({n_evolutivos} evolutivos, {len(no_aplican) - n_evolutivos} abiertos) · "
+           f"de los {n_documentables}: {n_documentables - n_sin_ficha} con ficha + {n_sin_ficha} sin ficha.")
 
 if pendientes.empty:
     st.success("Todos los casos cerrados ya tienen ficha.")

@@ -9,8 +9,11 @@ from pathlib import Path
 # Se calculan desde la ubicación de este archivo y no desde la carpeta en la que se ejecute el comando, así funcionan igual en local y en Streamlit Community Cloud.
 
 BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / "data" 
-DB_PATH = DATA_DIR / "sgct.db"
+DATA_DIR = BASE_DIR / "data"
+
+# Base de conocimiento (PostgreSQL en Supabase).
+DB_URL = os.getenv("SGCT_DB_URL", "").strip() or None
+DB_TIMEOUT_SEGUNDOS = 10
 
 # --- Reglas del producto ---
 MAX_PREGUNTAS = 3
@@ -46,7 +49,7 @@ LOG_FORMATO = "%(asctime)s %(levelname)s %(name)s: %(message)s"
 ZONA_HORARIA = "America/Bogota"
 
 # --- Archivo de seguimiento ---
-# Fila de los encabezados tal como se ve en Excel 
+# Fila de los encabezados tal como se ve en Excel
 FILA_ENCABEZADO = 7
 # Hoja del libro donde está el seguimiento. carga.py la busca primero; si no existe (o no tiene
 # los encabezados), revisa las demás hojas. En cada hoja busca los encabezados en las primeras
@@ -55,8 +58,8 @@ HOJA_SEGUIMIENTO = "Flujos"
 FILAS_A_REVISAR = 20
 
 # Nombres escritos como aparecen en el Excel. core/carga.py limpia igual estos valores y los encabezados del archivo (sin tildes, minúsculas, espacios simples) antes de compararlos.
-COL_HA = "#HA"  
-COL_DEV = "DEV"  
+COL_HA = "#HA"
+COL_DEV = "DEV"
 COL_TIPO = "Tipo"
 COL_ESTADO = "Estado"
 

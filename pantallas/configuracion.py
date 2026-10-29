@@ -19,6 +19,12 @@ c1.text_input("Clave de Gemini", "Configurada" if config.GEMINI_API_KEY else "No
 c2.text_input("Tiempo máximo de espera", f"{config.TIMEOUT_SEGUNDOS} s", disabled=True)
 st.caption("Para cambiar el motor se define la variable SGCT_PROVEEDOR (en Streamlit Cloud, en los secrets).")
 
+st.subheader("Base de conocimiento")
+c1, c2 = st.columns(2)
+c1.text_input("Base de datos", "PostgreSQL", disabled=True)
+c2.text_input("Persistencia", "Fuera de la aplicación: sobrevive a los reinicios", disabled=True)
+st.caption("La dirección de la base va en la variable SGCT_DB_URL (en Streamlit Cloud, en los secrets).")
+
 st.subheader("Reglas del borrador")
 c1, c2 = st.columns(2)
 c1.text_input("Máximo de preguntas por ficha", str(config.MAX_PREGUNTAS), disabled=True)

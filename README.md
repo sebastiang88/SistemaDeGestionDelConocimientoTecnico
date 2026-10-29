@@ -37,7 +37,8 @@ campo vacío.
 | **Casos pendientes** | 1. Carga el archivo de seguimiento en Excel · 2. Detecta los casos cerrados sin ficha |
 | **Documentar** | 3. Genera el borrador · 4. Hace hasta tres preguntas al responsable · 5. Guarda la ficha |
 | **Fichas** | 6. Consulta y abre las fichas guardadas |
-| Tablero y Configuración | Maquetas: se muestran como tales y no son funcionalidad entregada |
+| **Tablero** | Indicadores calculados desde la base: fichas por semana, causas por categoría, casos raros y nuevos |
+| Configuración | Maqueta: se muestra como tal y no es funcionalidad entregada |
 
 ## Cómo correrlo en local
 
@@ -50,8 +51,9 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-Arranca con el motor **simulado** (reglas locales, sin clave ni conexión). En **Casos pendientes**
-use el botón **Usar archivo de ejemplo**.
+Necesita una base PostgreSQL: cree `.streamlit/secrets.toml` con `SGCT_DB_URL = "postgresql://..."`
+(ese archivo no va al repositorio). Arranca con el motor **simulado** (reglas locales, sin clave de
+Gemini). En **Casos pendientes** use el botón **Usar archivo de ejemplo**.
 
 ### Variables de entorno
 
@@ -60,6 +62,7 @@ use el botón **Usar archivo de ejemplo**.
 | `SGCT_PROVEEDOR` | Motor de lenguaje: `simulado` o `gemini` | `simulado` |
 | `GEMINI_API_KEY` | Clave de la API de Gemini | (sin clave se usa el simulado) |
 | `SGCT_LOG_NIVEL` | Nivel de los logs: `DEBUG`, `INFO`, `WARNING` | `INFO` |
+| `SGCT_DB_URL` | Dirección de la base PostgreSQL (lleva la contraseña: sólo en los secrets) | Obligatoria: sin ella la app no arranca |
 
 Si Gemini falla por cualquier motivo (clave inválida, cuota agotada, sin conexión, respuesta
 inutilizable), la plataforma usa el motor simulado y lo registra en el log: la aplicación nunca
@@ -77,7 +80,7 @@ core/                  Lógica, sin interfaz (se puede probar desde la terminal)
   proveedor.py         Único punto de salida hacia el modelo (Gemini y simulado)
   generacion.py        Módulos 3 y 4: prompt, validación del borrador y preguntas
   fichas.py            Módulos 5 y 6: guardar, responder y consultar
-  db.py                SQLite: conexión, tablas y consultas
+  db.py                Base de datos PostgreSQL: conexión, tablas y consultas
 pantallas/             Pantallas (no se llama "pages/": ese nombre activa el modo antiguo de Streamlit)
 scripts/
   generar_ejemplo.py   Genera el archivo ficticio de ejemplo (semilla fija, reproducible)
@@ -89,8 +92,10 @@ por un modelo local (Ollama) para operar con datos reales sólo requiere cambiar
 
 ## Datos
 
-- **Base de datos:** SQLite, con tres tablas: `caso`, `ficha` y `pregunta`. Las preguntas van en
-  una tabla aparte para medir cuántas hicieron falta por ficha y cuántas quedaron sin responder.
+- **Base de datos:** PostgreSQL (Supabase), en local y en la aplicación en línea. La primera versión
+  usaba SQLite, pero Streamlit Community Cloud borra su disco con cada reinicio y las fichas se
+  perdían; PostgreSQL vive fuera de la aplicación. Cuatro tablas: `caso`, `ficha`, `pregunta` y `evidencia`. Las preguntas van en una
+  tabla aparte para medir cuántas hicieron falta por ficha y cuántas quedaron sin responder.
 - **Archivo de ejemplo:** `data/ejemplo/casos_ficticios.xlsx`, 60 casos inventados que imitan la
   estructura del archivo real (encabezados en la fila 7, dos columnas `#HA`, estados numerados).
   Se regenera con `python scripts/generar_ejemplo.py`.
@@ -98,7 +103,7 @@ por un modelo local (Ollama) para operar con datos reales sólo requiere cambiar
 
 ## Tecnologías
 
-Python, Streamlit, pandas, SQLite, Gemini (Google AI) y Streamlit Community Cloud.
+Python, Streamlit, pandas, docxtpl, PostgreSQL (Supabase), Gemini (Google AI) y Streamlit Community Cloud.
 
 ## Autoría
 

@@ -34,14 +34,14 @@ else:
         (documento.fecha_local(f.actualizada_en) - documento.fecha_local(f.creada_en)).total_seconds()
         for f in finales.itertuples()
     ]
-    tiempo_promedio = documento.duracion_texto(sum(segundos) / len(segundos))
+    tiempo_promedio = documento.duracion_texto(pd.Series(segundos).median())
 pendientes = st.session_state.get("pendientes")
 
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("Fichas finales", len(finales), border=True)
 c2.metric("Borradores", 0 if lista.empty else int((lista["estado"] == "borrador").sum()), border=True)
-c3.metric("Tiempo promedio para documentar", tiempo_promedio, border=True,
-          help="Desde que se genera el borrador hasta que se guarda la ficha final")
+c3.metric("Tiempo para documentar", tiempo_promedio, border=True,
+          help="Mediana del tiempo desde que se genera el borrador hasta que se guarda la ficha final")
 c4.metric("Casos pendientes", "—" if pendientes is None else len(pendientes), border=True,
           help="Se calcula al cargar el archivo de seguimiento en Casos pendientes")
 

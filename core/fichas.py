@@ -2,7 +2,6 @@
 # Se guarda junto, cómo una respuesta completa la ficha y cuándo queda final. 
 
 import logging
-import sqlite3
 import pandas as pd
 import config
 from core import db
@@ -18,7 +17,7 @@ class ErrorFicha(ValueError):
 # Devuelve el id de la ficha, todo va en una sola transacción
 def guardar_borrador(conexion, caso, borrador):
     try:
-        with conexion:
+        with conexion.transaction():
             db.guardar_caso(conexion, caso)
             ficha_id = db.insertar_ficha(conexion, {
                 "ha": caso.get("ha"),
@@ -34,7 +33,7 @@ def guardar_borrador(conexion, caso, borrador):
                 "duracion_ms": borrador.duracion_ms,
             })
             db.insertar_preguntas(conexion, ficha_id, borrador.preguntas)
-    except sqlite3.IntegrityError as error:
+    except db.ErrorIntegridad as error:
         
         raise ErrorFicha(f"El caso HA {caso.get('ha')} ya tiene una ficha.") from error
 
@@ -71,7 +70,7 @@ def responder(conexion, ficha_id, respuestas, finalizar, lecciones=None):
         campos["lecciones"] = lecciones.strip() or None
 
     estado = "final" if finalizar else "borrador"
-    with conexion:
+    with conexion.transaction():
         for pregunta_id, texto in respondidas:
             db.responder_pregunta(conexion, pregunta_id, texto)
         db.actualizar_ficha(conexion, ficha_id, campos, estado)
@@ -109,12 +108,12 @@ def agregar_evidencia(conexion, ficha_id, nombre, contenido):
     if len(db.obtener_evidencias(conexion, ficha_id)) >= config.MAX_EVIDENCIAS:
         raise ErrorFicha(f"La ficha ya tiene el máximo de {config.MAX_EVIDENCIAS} evidencias.")
 
-    with conexion:
+    with conexion.transaction():
         db.insertar_evidencia(conexion, ficha_id, nombre, tipo, contenido)
     logger.info("Evidencia '%s' agregada a la ficha %d", nombre, ficha_id)
 
 # Quita una imagen de la ficha.
 def quitar_evidencia(conexion, evidencia_id):
-    with conexion:
+    with conexion.transaction():
         db.borrar_evidencia(conexion, evidencia_id)
     logger.info("Evidencia %d eliminada", evidencia_id)
