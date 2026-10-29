@@ -37,13 +37,21 @@ with st.container(key="tarjeta_filtros"):
         placeholder="Número de HA o palabras clave: plantilla, ANS, correo, permisos…",
         icon=":material/search:",
     )
-    f1, f2, f3, f4, f5 = st.columns([1.2, 1, 1, 1.4, 1])
+    f1, f2, f3 = st.columns([1.2, 1, 1])
     estado = f1.segmented_control("Estado", ["Todas", "Finales", "Borradores"], default="Todas")
     tipos = f2.multiselect("Tipo", sorted(lista["tipo"].dropna().unique()), placeholder="Todos")
     responsables = f3.multiselect("Responsable", sorted(lista["responsable"].dropna().unique()), placeholder="Todos")
+
+    f4, f5, f6 = st.columns([1.2, 1, 1])
+    flujos = f4.multiselect("Flujo", sorted(lista["flujo"].dropna().unique()), placeholder="Todos")
     categorias = sorted(c for c in lista["categoria"].dropna().unique() if c != config.MARCA_SIN_SUSTENTO)
-    elegidas = f4.multiselect("Categoría de la causa", categorias, format_func=ui.nombre_categoria, placeholder="Todas")
-    flujos = f5.multiselect("Flujo", sorted(lista["flujo"].dropna().unique()), placeholder="Todos")
+    elegidas = f5.multiselect("Categoría de la causa", categorias, format_func=ui.nombre_categoria, placeholder="Todas")
+    subcategorias = sorted(lista.loc[lista["categoria"].isin(elegidas), "subcategoria"].dropna().unique())
+    subelegidas = f6.multiselect(
+        "Subcategoría", subcategorias, disabled=not elegidas,
+        placeholder="Todas" if elegidas else "Elija antes una categoría",
+        key=f"filtro_subcategoria_{'|'.join(elegidas)}",
+    )
 
 if estado == "Finales":
     lista = lista[lista["estado"] == "final"]
@@ -55,6 +63,8 @@ if responsables:
     lista = lista[lista["responsable"].isin(responsables)]
 if elegidas:
     lista = lista[lista["categoria"].isin(elegidas)]
+if subelegidas:
+    lista = lista[lista["subcategoria"].isin(subelegidas)]
 if flujos:
     lista = lista[lista["flujo"].isin(flujos)]
 
