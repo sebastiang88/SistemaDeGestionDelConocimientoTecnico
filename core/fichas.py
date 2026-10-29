@@ -81,6 +81,10 @@ def responder(conexion, ficha_id, respuestas, finalizar, lecciones=None):
                 ficha_id, len(respondidas), total, len(preguntas), estado)
     
 # --- Módulo 6: consultar ---
+# El id de la ficha de un caso, o None si no tiene.
+def ficha_del_caso(conexion, ha):
+    return db.id_ficha(conexion, ha)
+
 # Lista de fichas para la pantalla de consulta.
 def listar(conexion):
     return pd.DataFrame([dict(fila) for fila in db.listar_fichas(conexion)])

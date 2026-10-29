@@ -132,6 +132,11 @@ def ha_con_ficha(conexion):
     filas = conexion.execute("SELECT ha FROM ficha").fetchall()
     return {fila["ha"] for fila in filas}
 
+# El id de la ficha de un caso, o None si todavía no tiene.
+def id_ficha(conexion, ha):
+    fila = conexion.execute("SELECT id FROM ficha WHERE ha = %s", (ha,)).fetchone()
+    return fila["id"] if fila else None
+
 # --- Escritura ---
 # Estas funciones no abren su propia transacción: quien las llama (fichas.py) agrupa varias en una sola,
 # para que nunca quede una ficha guardada sin sus preguntas.

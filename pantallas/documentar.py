@@ -1,5 +1,6 @@
 # -- Pantalla de los módulos 3, 4 y 5: generar el borrador, responder las preguntas y guardar.
 
+import threading
 from contextlib import closing
 
 import streamlit as st
@@ -12,7 +13,17 @@ from core import db, deteccion, documento, fichas, generacion
 def soltar_caso():
     st.session_state.pop("ficha_id", None)
     st.session_state.pop("ha_a_documentar", None)
-    
+
+
+# Un candado por caso, compartido por todas las sesiones
+@st.cache_resource
+def candados():
+    return {}
+
+def candado_del_caso(ha):
+    return candados().setdefault(ha, threading.Lock())
+
+
 ui.encabezado("Documentar", "Genere el borrador, responda lo que falta y guarde la ficha.")
 
 ficha_id = st.session_state.get("ficha_id")
@@ -54,19 +65,23 @@ if ficha_id is None:
     st.subheader(f"HA {ha}")
     ui.mostrar_caso(caso)
 
-    # El borrador se guarda apenas se genera, así no se pierde la llamada al modelo si el usuario cierra la pantalla
+    # El borrador se guarda apenas se genera, así no se pierde la llamada al modelo si el usuario cierra la pantalla.
     if st.button("Generar borrador", type="primary", icon=":material/auto_awesome:"):
-        with st.spinner("Generando el borrador…"):
-            borrador = generacion.generar_borrador(caso)
-            try:
+        with candado_del_caso(ha), st.spinner("Generando el borrador…"):
+            with closing(db.conectar()) as conexion:
+                nuevo_id = fichas.ficha_del_caso(conexion, ha)
+            if nuevo_id is None:
+                borrador = generacion.generar_borrador(caso)
                 with closing(db.conectar()) as conexion:
-                    nuevo_id = fichas.guardar_borrador(conexion, caso, borrador)
-                    # El caso ya tiene ficha: sale de la lista de pendientes.
-                    st.session_state["pendientes"] = deteccion.quitar_con_ficha(
-                        st.session_state["documentables"], conexion)
-            except fichas.ErrorFicha as error:
-                st.error(str(error))
-                st.stop()
+                    try:
+                        nuevo_id = fichas.guardar_borrador(conexion, caso, borrador)
+                    except fichas.ErrorFicha:
+                        # Otra pestaña la guardó mientras se generaba: se abre esa.
+                        nuevo_id = fichas.ficha_del_caso(conexion, ha)
+            with closing(db.conectar()) as conexion:
+                # El caso ya tiene ficha: sale de la lista de pendientes.
+                st.session_state["pendientes"] = deteccion.quitar_con_ficha(
+                    st.session_state["documentables"], conexion)
         st.session_state["ficha_id"] = nuevo_id
         st.session_state.pop("ha_a_documentar", None)
         st.rerun()
