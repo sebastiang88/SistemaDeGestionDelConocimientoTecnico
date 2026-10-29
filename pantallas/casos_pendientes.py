@@ -73,9 +73,6 @@ c3.metric("No aplican", len(no_aplican), border=True,
           help=f"{n_evolutivos} evolutivos y {len(no_aplican) - n_evolutivos} casos todavía abiertos")
 c4.metric("Ya tienen ficha", n_documentables - n_sin_ficha, border=True)
 c5.metric("Sin ficha", n_sin_ficha, border=True)
-st.caption(f"{total} casos = {n_documentables} que se documentan + {len(no_aplican)} que no aplican "
-           f"({n_evolutivos} evolutivos, {len(no_aplican) - n_evolutivos} abiertos) · "
-           f"de los {n_documentables}: {n_documentables - n_sin_ficha} con ficha + {n_sin_ficha} sin ficha.")
 
 if pendientes.empty:
     st.success("Todos los casos cerrados ya tienen ficha.")
