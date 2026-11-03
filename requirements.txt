@@ -1,4 +1,7 @@
-streamlit==1.66.0
+# Streamlit 1.56.0: la última con el servidor Tornado. Desde la 1.57 usa Uvicorn, y en Streamlit Cloud
+# ese servidor deja sin respuesta cerca de 1 de cada 5 descargas de archivos de la interfaz (error 500
+# tras 40-60 s). Medido el 3 de noviembre; otras apps de la plataforma no lo tenían.
+streamlit==1.56.0
 pandas==3.0.6
 openpyxl==3.1.5
 google-genai==2.31.0
