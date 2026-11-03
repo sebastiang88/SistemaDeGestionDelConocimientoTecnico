@@ -318,8 +318,17 @@ def observaciones(rng, dev, recepcion, pista=None):
 
 def construir_casos(rng):
     #Devuelve la lista de filas (una por caso) en el orden de ENCABEZADOS.
+    return construir_casos_con_respuestas(rng)[0]
+
+
+# Igual que construir_casos, y además devuelve, por cada caso, lo que de verdad está escrito en él:
+# es la respuesta esperada contra la que scripts/prueba_controlada.py compara el borrador.
+# None en un campo significa que el caso no trae esa información y lo correcto es [SIN SUSTENTO].
+# No usa números aleatorios adicionales: el archivo que se genera es el mismo de siempre.
+def construir_casos_con_respuestas(rng):
     usados = set()
     casos = []
+    esperados = []
 
     # Plan de los 60 casos: (tipo, grupo). Los cerrados son los que la plataforma documenta.
     plan = (
@@ -380,11 +389,24 @@ def construir_casos(rng):
             if causa_solucion is None and i not in con_descripcion_pobre and rng.random() < 0.3:
                 pista = "Se aplica ajuste: " + escenario["solucion"].split(" y ")[0].rstrip(".") + "."
 
+        # Lo que trae escrito el caso. La pista de Observaciones sólo dice una parte de la solución.
+        formato_usado = formato if causa_solucion is not None else None
+        esperados.append({
+            "sintoma": descripcion if descripcion not in DESCRIPCIONES_POBRES else None,
+            "causa": escenario["causa"] if formato_usado and "{causa}" in formato else None,
+            "solucion": (escenario["solucion"] if formato_usado and "{solucion}" in formato
+                         else pista.removeprefix("Se aplica ajuste: ") if pista else None),
+            "categoria": escenario["categoria"],
+            "subcategoria": escenario["subcategoria"],
+            "categoria_en_archivo": categoria is not None,
+        })
+
         if tipo == "Control de cambio" and grupo != "evolutivo":
             vobo_solicitud = fin_qa + timedelta(days=1)
             vobo = vobo_solicitud + timedelta(days=rng.randint(0, 3)) if cierre else None
 
         ha = numero_ha(rng, usados)
+        esperados[-1]["ha"] = str(ha)
         ha_dev = ha
         if rng.random() < 0.07:
             
@@ -426,8 +448,11 @@ def construir_casos(rng):
             causa_solucion,
         ])
 
-    rng.shuffle(casos)
-    return casos
+    # Se barajan juntos para que cada caso conserve su respuesta. Barajar pares gasta los mismos
+    # números aleatorios que barajar sólo los casos, así que el orden del archivo no cambia.
+    pares = list(zip(casos, esperados))
+    rng.shuffle(pares)
+    return [c for c, _ in pares], [e for _, e in pares]
 
 
 def escribir_excel(casos, salida):
