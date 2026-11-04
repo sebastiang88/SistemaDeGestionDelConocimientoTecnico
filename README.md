@@ -7,10 +7,10 @@ no se puede deducir: máximo tres preguntas.
 Producto mínimo viable de la materia de practicas por la modalidad de emprendimiento, Facultad de Ingeniería, Corporación
 Universitaria Iberoamericana.
 
-**Aplicación en línea:** https://sgct-conocimiento.streamlit.app (Streamlit Community Cloud)
+**Aplicación en línea:** https://sistemadegestiondelconocimientotecnico.onrender.com (Render)
 
-> Si la aplicación lleva un tiempo sin uso, Streamlit la suspende: al entrar aparece un botón
-> para reactivarla, que tarda menos de un minuto.
+> Si la aplicación lleva más de 15 minutos sin uso, Render la suspende: la primera visita tarda
+> cerca de un minuto mientras arranca.
 
 > Todos los datos de este repositorio y de la aplicación en línea son **ficticios**. Ningún dato
 > real del cliente entra al repositorio, a la plataforma ni a un servicio de IA externo.
@@ -103,7 +103,11 @@ por un modelo local (Ollama) para operar con datos reales sólo requiere cambiar
 
 ## Tecnologías
 
-Python, Streamlit, pandas, docxtpl, PostgreSQL (Supabase), Gemini (Google AI) y Streamlit Community Cloud.
+Python, Streamlit, pandas, docxtpl, PostgreSQL (Supabase), Gemini (Google AI) y Render.
+
+La aplicación se publicó primero en Streamlit Community Cloud. Allí cerca de 1 de cada 5 descargas
+de los archivos de la interfaz fallaba tras 40 a 60 segundos, con la aplicación sin uso, con dos
+versiones de Streamlit y después de reiniciarla; en Render, con el mismo código, no falló ninguna.
 
 ## Autoría
 
