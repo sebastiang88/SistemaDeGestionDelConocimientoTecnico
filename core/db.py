@@ -1,11 +1,14 @@
 # -- Acceso a la base de conocimiento en PostgreSQL.
 # Es el único módulo que habla con la base
 
+import atexit
 import logging
 import math
+import threading
 
 import psycopg
 from psycopg.rows import dict_row
+from psycopg_pool import ConnectionPool, PoolTimeout
 
 import config
 
@@ -21,32 +24,80 @@ class ErrorBase(RuntimeError):
 ErrorIntegridad = psycopg.IntegrityError
 
 
-#-- Abre una conexión nueva a la base y la devuelve. Cada operación abre su propia conexión y la cierra
-# al terminar. La base es PostgreSQL y vive fuera de la app, por eso no se usa un pool de conexiones.
+# --- Conexiones ---
+# Abrir una conexión es lo más caro de cada operación: cifrado y autenticación con el servidor, casi un
+# segundo, y bastante más en Render, que da 0,1 de CPU en el plan gratuito. 
+MAX_CONEXIONES = 4
+
+_grupo = None
+_candado = threading.Lock()
+
+
+def _abrir_grupo():
+    global _grupo
+    with _candado:
+        if _grupo is None:
+            grupo = ConnectionPool(
+                config.DB_URL,
+                min_size=1,
+                max_size=MAX_CONEXIONES,
+                kwargs={
+                    "autocommit": True,
+                    "row_factory": dict_row,
+                    "prepare_threshold": None,
+                    "connect_timeout": config.DB_TIMEOUT_SEGUNDOS,
+                },
+                # Antes de prestar una conexión se comprueba que siga viva: el servidor cierra las que
+                # pasan mucho tiempo quietas, y una conexión muerta haría fallar la consulta.
+                check=ConnectionPool.check_connection,
+                timeout=config.DB_TIMEOUT_SEGUNDOS,
+                open=False,
+                name="sgct",
+            )
+            try:
+                grupo.open(wait=True, timeout=config.DB_TIMEOUT_SEGUNDOS)
+            except PoolTimeout as error:
+                grupo.close()
+                # El detalle (puede traer el usuario y el servidor) va al log, no a la pantalla.
+                logger.error("No se pudo conectar a PostgreSQL: %s", error)
+                raise ErrorBase("No se pudo conectar a la base de datos. "
+                                "Revise SGCT_DB_URL y la conexión a internet.") from error
+            # La URL lleva la contraseña: nunca va al log.
+            logger.info("Grupo de conexiones a PostgreSQL abierto (máximo %d)", MAX_CONEXIONES)
+            # Se cierra al apagar la app; si no, Python espera a los hilos del grupo antes de salir.
+            atexit.register(grupo.close)
+            _grupo = grupo
+    return _grupo
+
+
+# Conexión prestada por el grupo. Se usa igual que una conexión de psycopg (execute, cursor,
+# transaction); al cerrarla, en lugar de cortarla, se devuelve al grupo para la siguiente operación.
+class ConexionPrestada:
+    def __init__(self, grupo, conexion):
+        self._grupo, self._conexion = grupo, conexion
+
+    def __getattr__(self, nombre):
+        return getattr(self._conexion, nombre)
+
+    def close(self):
+        if self._conexion is not None:
+            self._grupo.putconn(self._conexion)
+            self._conexion = None
+
+
+#-- Presta una conexión a la base. Quien la pide la cierra al terminar (con closing), y así vuelve al grupo.
 def conectar():
     if not config.DB_URL:
         raise ErrorBase("Falta SGCT_DB_URL, la dirección de la base PostgreSQL. "
-                        "Defínala en .streamlit/secrets.toml (en Streamlit Cloud, en los secrets).")
+                        "Defínala en .streamlit/secrets.toml (en Render, en las variables de entorno).")
+    grupo = _abrir_grupo()
     try:
-        conexion = psycopg.connect(
-            config.DB_URL,
-            # Cada sentencia se confirma sola; las que deben ir juntas se agrupan con
-            # "with conexion.transaction():", que confirma al final o deshace todo si algo falla.
-            autocommit=True,
-            # Permite leer cada fila por nombre de columna (fila["causa"]) y no por posición.
-            row_factory=dict_row,
-            # El pooler de Supabase no admite sentencias preparadas.
-            prepare_threshold=None,
-            connect_timeout=config.DB_TIMEOUT_SEGUNDOS,
-        )
-    except psycopg.OperationalError as error:
-        # El mensaje original puede traer el usuario y el servidor: va al log, no a la pantalla.
-        logger.error("No se pudo conectar a PostgreSQL: %s", error)
-        raise ErrorBase("No se pudo conectar a la base de datos. Revise SGCT_DB_URL y la conexión a internet.") from error
-
-    # La URL lleva la contraseña: nunca va al log.
-    logger.debug("Conexión abierta a PostgreSQL")
-    return conexion
+        conexion = grupo.getconn()
+    except PoolTimeout as error:
+        logger.error("No hubo una conexión disponible a PostgreSQL: %s", error)
+        raise ErrorBase("No se pudo conectar a la base de datos. "
+                        "Revise SGCT_DB_URL y la conexión a internet.") from error
+    return ConexionPrestada(grupo, conexion)
 
 
 # La fecha se guarda como texto en UTC ("2026-10-28 19:24:27")
