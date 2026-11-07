@@ -13,10 +13,6 @@ from core import db, documento, fichas
 
 COLOR_BARRAS = "#2E6DB4"
 
-# Línea base medida sobre 240 casos del archivo real
-LINEA_BASE_CATEGORIA = 0
-CASOS_LINEA_BASE = 240
-
 MESES = ("ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic")
 PERIODOS = {"Todo": None, "Últimos 30 días": 30, "Últimos 7 días": 7}
 
@@ -68,9 +64,9 @@ c1.metric("Fichas finales", len(finales), border=True,
 c2.metric("Tiempo para documentar", documento.duracion_texto(finales["minutos"].median() * 60), border=True,
           help="Mediana del tiempo desde que se genera el borrador hasta que se guarda la ficha final")
 c3.metric("Categoría diligenciada", f"{porcentaje} %", border=True,
-          delta=f"{porcentaje - LINEA_BASE_CATEGORIA:+d} pts frente a la línea base",
-          help=f"Fichas finales con categoría de causa. Línea base: {LINEA_BASE_CATEGORIA} % en "
-               f"{CASOS_LINEA_BASE} casos del archivo de seguimiento")
+          delta=f"{porcentaje - config.LINEA_BASE_CATEGORIA:+d} pts frente a la línea base",
+          help=f"Fichas finales con categoría de causa. Línea base: {config.LINEA_BASE_CATEGORIA} % en "
+               f"{config.LINEA_BASE_CASOS} casos del archivo de seguimiento")
 c4.metric("Preguntas sin responder", sin_responder, border=True,
           help=f"De {preguntas} preguntas hechas en las fichas finales")
 

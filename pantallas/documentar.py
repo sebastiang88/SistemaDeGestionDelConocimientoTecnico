@@ -181,12 +181,23 @@ for evidencia in ficha["evidencias"]:
 st.caption(f"Capturas de pantalla o imágenes que respalden la solución. Hasta {config.MAX_EVIDENCIAS} "
            f"imágenes de {config.MAX_MB_EVIDENCIA} MB. No suba capturas con datos reales.")
 version = st.session_state.get("version_evidencias", 0)
+# Sin "type": si se le pasa, Streamlit rechaza en el navegador los archivos de otro formato, no se los
+# entrega a la app y la ficha se guardaba sin avisar (hallazgo de la prueba de pasillo). Así llegan todos
+# y la app dice cuál no sirve.
 nuevas = st.file_uploader(
-    "Agregar imágenes",
-    type=list(config.TIPOS_EVIDENCIA),
+    "Agregar imágenes (" + ", ".join(config.TIPOS_EVIDENCIA) + ")",
     accept_multiple_files=True,
     key=f"evidencias_{ficha_id}_{version}",
 )
+rechazadas = []
+for imagen in nuevas or []:
+    try:
+        fichas.revisar_evidencia(imagen.name, imagen.getvalue())
+    except fichas.ErrorFicha as error:
+        rechazadas.append(str(error))
+if rechazadas:
+    st.error("No se pueden adjuntar: " + " ".join(rechazadas) + " Quítelos de la lista para poder guardar.",
+             icon=":material/block:")
 
 def contestada(respuesta):
     return bool(respuesta.strip()) if isinstance(respuesta, str) else bool(respuesta)
@@ -198,9 +209,25 @@ if quedan:
     st.warning(f"Si guarda ahora, quedarán como {config.MARCA_SIN_SUSTENTO}: {', '.join(quedan)}. "
                "Puede guardarla así o completar las respuestas.", icon=":material/info:")
 
-columna_despues, columna_final, _ = st.columns([1, 1, 2])
-seguir_despues = columna_despues.button("Guardar y seguir después", width="stretch")
-guardar_final = columna_final.button("Guardar ficha final", type="primary", width="stretch")
+columna_despues, columna_final, _, columna_descartar = st.columns([1, 1, 1, 1])
+seguir_despues = columna_despues.button("Guardar y seguir después", width="stretch", disabled=bool(rechazadas))
+guardar_final = columna_final.button("Guardar ficha final", type="primary", width="stretch",
+                                     disabled=bool(rechazadas))
+
+# Descartar un caso tomado por error (hallazgo del test de humo): al generar el borrador el caso sale de
+# los pendientes y no había forma de devolverlo. Se confirma antes, porque borra las respuestas.
+with columna_descartar.popover("Descartar borrador", icon=":material/delete:", width="stretch"):
+    st.markdown(f"Se borrará el borrador de HA {ficha['ha']} con sus respuestas e imágenes, "
+                "y el caso volverá a **Casos pendientes**.")
+    if st.button("Sí, descartar", type="primary", key=f"descartar_{ficha_id}"):
+        with closing(db.conectar()) as conexion:
+            fichas.descartar_borrador(conexion, ficha_id)
+            if "documentables" in st.session_state:
+                st.session_state["pendientes"] = deteccion.quitar_con_ficha(
+                    st.session_state["documentables"], conexion)
+        st.session_state["aviso"] = f"Borrador de HA {ficha['ha']} descartado. El caso volvió a Casos pendientes."
+        soltar_caso()
+        st.rerun()
 
 if seguir_despues or guardar_final:
     try:

@@ -243,6 +243,13 @@ def responder_pregunta(conexion, pregunta_id, respuesta):
         (respuesta, pregunta_id),
     )
 
+# Borra un borrador con sus preguntas y evidencias (ON DELETE CASCADE). La condición sobre el estado está
+# en la misma consulta para que nunca se borre una ficha final. Devuelve cuántas fichas borró (0 o 1).
+def borrar_borrador(conexion, ficha_id):
+    return conexion.execute(
+        "DELETE FROM ficha WHERE id = %s AND estado = 'borrador'", (ficha_id,)
+    ).rowcount
+
 # Actualiza los campos de la ficha que vengan en "campos" y su estado.
 def actualizar_ficha(conexion, ficha_id, campos, estado):
     permitidos = ("sintoma", "causa", "solucion", "categoria", "subcategoria", "lecciones")

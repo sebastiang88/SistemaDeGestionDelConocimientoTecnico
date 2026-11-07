@@ -80,6 +80,15 @@ def responder(conexion, ficha_id, respuestas, finalizar, lecciones=None):
     logger.info("Ficha %d: %d respuestas nuevas, %d de %d preguntas respondidas, queda en estado %s",
                 ficha_id, len(respondidas), total, len(preguntas), estado)
     
+# Descarta un borrador tomado por error: se borra con sus preguntas y evidencias, y el caso vuelve a quedar
+# sin ficha, es decir, otra vez entre los pendientes. Una ficha final no se puede descartar.
+def descartar_borrador(conexion, ficha_id):
+    with conexion.transaction():
+        borradas = db.borrar_borrador(conexion, ficha_id)
+    if not borradas:
+        raise ErrorFicha("Sólo se puede descartar un borrador; esta ficha ya es final o no existe.")
+    logger.info("Borrador %d descartado: el caso vuelve a los pendientes", ficha_id)
+
 # --- Módulo 6: consultar ---
 # El id de la ficha de un caso, o None si no tiene.
 def ficha_del_caso(conexion, ha):
@@ -103,18 +112,24 @@ def abrir(conexion, ficha_id):
 # --- Evidencias ---
 # Agrega una imagen a la ficha. Se valida el tipo, el tamaño y la cantidad antes de guardarla.
 def agregar_evidencia(conexion, ficha_id, nombre, contenido):
-    tipo = nombre.rsplit(".", 1)[-1].lower() if "." in nombre else ""
-    if tipo not in config.TIPOS_EVIDENCIA:
-        raise ErrorFicha(f"'{nombre}' no es una imagen válida. Formatos aceptados: "
-                         + ", ".join(config.TIPOS_EVIDENCIA) + ".")
-    if len(contenido) > config.MAX_MB_EVIDENCIA * 1024 * 1024:
-        raise ErrorFicha(f"'{nombre}' pesa más de {config.MAX_MB_EVIDENCIA} MB.")
+    tipo = revisar_evidencia(nombre, contenido)
     if len(db.obtener_evidencias(conexion, ficha_id)) >= config.MAX_EVIDENCIAS:
         raise ErrorFicha(f"La ficha ya tiene el máximo de {config.MAX_EVIDENCIAS} evidencias.")
 
     with conexion.transaction():
         db.insertar_evidencia(conexion, ficha_id, nombre, tipo, contenido)
     logger.info("Evidencia '%s' agregada a la ficha %d", nombre, ficha_id)
+
+# Revisa que un archivo sirva como evidencia (formato y tamaño) y devuelve su tipo.
+# Documentar la usa antes de guardar nada, para avisar en pantalla cuál archivo no se puede adjuntar.
+def revisar_evidencia(nombre, contenido):
+    tipo = nombre.rsplit(".", 1)[-1].lower() if "." in nombre else ""
+    if tipo not in config.TIPOS_EVIDENCIA:
+        raise ErrorFicha(f"'{nombre}' no es una imagen. Formatos aceptados: "
+                         + ", ".join(config.TIPOS_EVIDENCIA) + ".")
+    if len(contenido) > config.MAX_MB_EVIDENCIA * 1024 * 1024:
+        raise ErrorFicha(f"'{nombre}' pesa más de {config.MAX_MB_EVIDENCIA} MB.")
+    return tipo
 
 # Quita una imagen de la ficha.
 def quitar_evidencia(conexion, evidencia_id):

@@ -19,6 +19,11 @@ DB_TIMEOUT_SEGUNDOS = 10
 MAX_PREGUNTAS = 3
 MARCA_SIN_SUSTENTO = "[SIN SUSTENTO]"
 
+# Línea base medida en el diagnóstico sobre el archivo real: en 240 casos cerrados la categoría de causa
+# estaba vacía en todos. La muestran Inicio y el Tablero, que compara contra ella.
+LINEA_BASE_CASOS = 240
+LINEA_BASE_CATEGORIA = 0
+
 # Campos de la ficha, en el orden en que se muestran. Siguen la práctica del equipo, que ya separa causa y solución en la columna Causa/Solucion; el síntoma sale de la descripción.
 CAMPOS_FICHA = ("sintoma", "causa", "solucion")
 
