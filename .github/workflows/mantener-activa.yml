@@ -1,0 +1,28 @@
+# Mantiene activa la base de datos mientras se califica el proyecto.
+# Supabase pausa los proyectos gratuitos tras 7 días sin actividad, y entonces la app no puede leer las
+# fichas. Esta tarea hace una consulta cada 3 días. También se puede correr a mano desde la pestaña Actions.
+# La dirección de la base va en el secreto SGCT_DB_URL del repositorio, nunca en este archivo.
+name: Mantener activa la base
+
+on:
+  schedule:
+    - cron: "0 13 */3 * *"
+  workflow_dispatch:
+
+jobs:
+  consultar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Instalar el conector de PostgreSQL
+        run: pip install "psycopg[binary]==3.3.6"
+      - name: Consultar la base
+        env:
+          SGCT_DB_URL: ${{ secrets.SGCT_DB_URL }}
+        run: |
+          python -c "
+          import os, psycopg
+          with psycopg.connect(os.environ['SGCT_DB_URL'], prepare_threshold=None, connect_timeout=30) as c:
+              print(c.execute('SELECT COUNT(*) FROM ficha').fetchone()[0], 'fichas en la base')
+          "
+      - name: Despertar la app en Render
+        run: curl -s -o /dev/null -m 120 -w "Render respondió %{http_code}\n" https://sistemadegestiondelconocimientotecnico.onrender.com/
